@@ -10,6 +10,53 @@ interface SettingsProps {
   socket: Socket;
 }
 
+const PortSelector: React.FC<{
+  ports: Port[];
+  selectedPort: string;
+  onPortChange: (port: string) => void;
+  onRefresh: () => void;
+}> = ({ ports, selectedPort, onPortChange, onRefresh }) => (
+  <div className="form-group">
+    <label htmlFor="port-select">Available Ports:</label>
+    <div className="port-selector-row">
+      <select id="port-select" value={selectedPort} onChange={(e) => onPortChange(e.target.value)} disabled={ports.length === 0}>
+        {ports.length > 0 ? (
+          ports.map((port) => (
+            <option key={port.device} value={port.device}>
+              {port.device} - {port.description}
+            </option>
+          ))
+        ) : (
+          <option value="" disabled>No ports found</option>
+        )}
+      </select>
+      <button onClick={onRefresh} className="button-outline">Refresh</button>
+    </div>
+  </div>
+);
+
+const ConnectionManager: React.FC<{
+  selectedPort: string;
+  status: string;
+  onConnect: () => void;
+}> = ({ selectedPort, status, onConnect }) => {
+    const getStatusClass = () => {
+        if (status.startsWith('Connected')) return 'status-connected';
+        if (status.startsWith('Error')) return 'status-error';
+        return 'status-disconnected';
+    };
+
+    return (
+        <>
+            <button onClick={onConnect} disabled={!selectedPort} className="button-primary">Connect</button>
+            <div className={`status ${getStatusClass()}`}>
+                <p><strong>Status:</strong> {status}</p>
+            </div>
+        </>
+    );
+};
+
+
 const Settings: React.FC<SettingsProps> = ({ socket }) => {
   const [ports, setPorts] = useState<Port[]>([]);
   const [selectedPort, setSelectedPort] = useState<string>('');
@@ -21,7 +68,7 @@ const Settings: React.FC<SettingsProps> = ({ socket }) => {
 
     const handleSerialPorts = (portList: Port[]) => {
       setPorts(portList);
-      if (portList.length > 0) {
+      if (portList.length > 0 && !selectedPort) {
         setSelectedPort(portList[0].device);
       }
     };
@@ -43,7 +90,7 @@ const Settings: React.FC<SettingsProps> = ({ socket }) => {
       socket.off('serial_ports', handleSerialPorts);
       socket.off('connection_status', handleConnectionStatus);
     };
-  }, [socket]);
+  }, [socket, selectedPort]);
 
   const handleRefresh = () => {
     socket.emit('get_serial_ports');
@@ -57,27 +104,19 @@ const Settings: React.FC<SettingsProps> = ({ socket }) => {
   };
 
   return (
-    <div className="card">
+    <div className="card settings-card">
       <h2>Serial Port Settings</h2>
-      <div className="form-group">
-        <label htmlFor="port-select">Available Ports:</label>
-        <select id="port-select" value={selectedPort} onChange={(e) => setSelectedPort(e.target.value)}>
-          {ports.length > 0 ? (
-            ports.map((port) => (
-              <option key={port.device} value={port.device}>
-                {port.device} - {port.description}
-              </option>
-            ))
-          ) : (
-            <option value="" disabled>No ports found</option>
-          )}
-        </select>
-        <button onClick={handleRefresh} style={{ marginLeft: '10px' }}>Refresh</button>
-      </div>
-      <button onClick={handleConnect} disabled={!selectedPort}>Connect</button>
-      <div className="status">
-        <p><strong>Status:</strong> {status}</p>
-      </div>
+      <PortSelector
+        ports={ports}
+        selectedPort={selectedPort}
+        onPortChange={setSelectedPort}
+        onRefresh={handleRefresh}
+      />
+      <ConnectionManager
+        selectedPort={selectedPort}
+        status={status}
+        onConnect={handleConnect}
+      />
     </div>
   );
 };

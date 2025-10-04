@@ -1,14 +1,14 @@
 {
-  "name": "ui",
+  "name": "omip-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "main": "public/electron.js",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:react\" \"npm:dev:electron\"",
     "dev:react": "vite",
     "dev:electron": "wait-on http://127.0.0.1:5173 && electron .",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && electron-builder",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -34,5 +34,39 @@
     "typescript-eslint": "^8.45.0",
     "vite": "^7.1.7",
     "wait-on": "^9.0.1"
+  },
+  "build": {
+    "appId": "com.github.yourname.omip",
+    "productName": "Open Modular Input Protocol",
+    "files": [
+      "build/**/*",
+      "public/electron.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../venv",
+        "to": "app/venv"
+      },
+      {
+        "from": "../main.py",
+        "to": "app/main.py"
+      },
+      {
+        "from": "../omip_pb2.py",
+        "to": "app/omip_pb2.py"
+      },
+      {
+        "from": "../requirements.txt",
+        "to": "app/requirements.txt"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
