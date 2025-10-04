@@ -26,3 +26,6 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r src/python/requirements.txt
 ```
+
+## タスクの管理について
+task.mdにタスクを記載してください

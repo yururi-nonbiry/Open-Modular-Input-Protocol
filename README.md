@@ -204,3 +204,10 @@ message DeviceCapabilityResponse {
 ├── pc_software/        # PC制御ソフトウェアのソースコード
 └── proto/              # Protobufスキーマ定義 (.protoファイル)
 ```
+
+### 9. PCソフトウェア開発環境とビルド手順
+
+#### 9.1 フロントエンド (Vite + Electron)
+- `pc_software/ui` フロントエンドのビルドには Node.js 18 以上が必須です。開発環境が WSL などで古い Node.js を参照している場合は、`npm run build` が `scripts/build.cjs` を介して Windows 側の `node.exe` (例: `C:\Program Files\nodejs\node.exe`) を自動選択します。
+- `scripts/build.cjs` は `tsc -b` → `vite build` → `electron-builder` の順に起動し、フロントエンドと Electron パッケージをまとめて生成します。個別にコマンドを実行する必要はありません。
+- Electron パッケージャーの設定では `win.signAndEditExecutable = false` としており、Windows でのシンボリックリンク作成やコードサイニングを強制しません。必要に応じて署名処理を行いたい場合は `package.json` の設定を調整してください。
