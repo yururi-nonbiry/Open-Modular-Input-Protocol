@@ -71,3 +71,136 @@
 - **コアプロトコルの実装:** `INPUT_DIGITAL`と`INPUT_ANALOG`メッセージの送受信およびProtobufによるバイナリ変換を完成させる。
 - **PC制御ソフトウェア (Windows/macOS):** 接続したデバイスの入力を受け取り、アクティブなアプリケーションに応じて任意のキーボードコマンドを実行できる最小限の制御エンジンを実装する。
 - **低遅延の証明:** アナログ入力からPC側でのコマンド実行までの遅延が既存HIDデバイスよりも低いことを実証する。
+
+### 5. プロトコル詳細定義 (`omip.proto`)
+PCとデバイス間の通信データは、以下のProtobufスキーマに基づいてシリアライズされる。
+
+```protobuf
+syntax = "proto3";
+
+package omip;
+
+// ラッパーメッセージ: すべてのメッセージはこのラッパーに含まれて送信される
+message WrapperMessage {
+  oneof message_type {
+    InputDigital input_digital = 1;
+    InputAnalog input_analog = 2;
+    InputEncoder input_encoder = 3;
+    FeedbackImage feedback_image = 4;
+    FeedbackLed feedback_led = 5;
+    SystemConfig system_config = 6;
+    DeviceCapabilityRequest capability_request = 7;
+    DeviceCapabilityResponse capability_response = 8;
+  }
+}
+
+// 1. デバイス → PC (入力データ)
+message InputDigital {
+  uint32 device_id = 1;
+  uint32 port_id = 2;
+  bool state = 3; // ON or OFF
+}
+
+message InputAnalog {
+  uint32 device_id = 1;
+  uint32 port_id = 2;
+  float value = 3; // 0.00 to 1.00
+}
+
+message InputEncoder {
+  uint32 device_id = 1;
+  uint32 port_id = 2;
+  sint32 steps = 3; // 正: 時計回り, 負: 反時計回り
+}
+
+// 2. PC → デバイス (フィードバック・制御)
+message FeedbackImage {
+  uint32 device_id = 1;
+  uint32 screen_id = 2;
+  enum ImageFormat {
+    RGB565_RLE = 0; // RLE圧縮されたRGB565
+    JPEG = 1;
+  }
+  ImageFormat format = 3;
+  bytes image_data = 4;
+}
+
+message FeedbackLed {
+  uint32 device_id = 1;
+  uint32 led_id = 2;
+  uint32 color_rgb = 3; // 24-bit RGB (0xRRGGBB)
+}
+
+message SystemConfig {
+  // (将来的な拡張のためのプレースホルダ)
+  // 例: ファームウェア更新命令など
+}
+
+// 3. デバイス能力定義
+message DeviceCapabilityRequest {
+  // マスターハブからサブデバイスへ能力を問い合わせる
+}
+
+message DeviceCapabilityResponse {
+  uint32 device_id = 1;
+  repeated PortDescription ports = 2;
+
+  message PortDescription {
+    enum PortType {
+      DIGITAL_INPUT = 0;
+      ANALOG_INPUT = 1;
+      ENCODER_INPUT = 2;
+      IMAGE_OUTPUT = 3;
+      LED_OUTPUT = 4;
+    }
+    PortType type = 1;
+    uint32 port_id = 2;
+    // 将来的な拡張: 解像度、感度など
+  }
+}
+```
+
+### 6. I2C通信規約 (マスターハブ ↔ サブデバイス)
+マスターハブは、接続されたサブデバイスを管理するために以下のI2Cコマンドを使用する。
+
+| コマンド (1Byte) | 説明 | 送信データ | 受信データ |
+| :--- | :--- | :--- | :--- |
+| `0x01` | `GET_CAPABILITIES` | なし | `DeviceCapabilityResponse`のProtobufシリアライズデータ |
+| `0x10` | `READ_INPUT_EVENT` | なし | `WrapperMessage`のProtobufシリアライズデータ (入力イベントを含む) |
+| `0x20` | `WRITE_OUTPUT_DATA` | `WrapperMessage`のProtobufシリアライズデータ (フィードバックデータを含む) | なし |
+
+- **アドレス:** サブデバイスは7-bit I2Cアドレスを持つ。アドレスの衝突を避けるための機構は将来的に定義する (例: DIPスイッチ、ソフトウェア設定)。
+- **通信フロー:**
+    1. マスターハブは起動時、I2Cバスをスキャンしてサブデバイスを検出する。
+    2. 検出した各サブデバイスに対し、`GET_CAPABILITIES`コマンドを送信する。
+    3. サブデバイスは自身の能力を`DeviceCapabilityResponse`として返す。
+    4. マスターハブは、定期的に各サブデバイスに`READ_INPUT_EVENT`を送信し、入力状態をポーリングする。
+
+### 7. MVPの技術スタック
+最初のマイルストーン（MVP）を迅速に開発するため、以下の技術スタックを選定する。
+
+- **PC制御ソフトウェア:**
+    - **言語:** Python 3.9+
+    - **主要ライブラリ:**
+        - `pyserial`: USBシリアル通信用。
+        - `protobuf`: プロトコルデータのシリアライズ/デシリアライズ用。
+        - `pynput`: OSレベルのキーボード/マウス操作用。
+- **ファームウェア (ESP32):**
+    - **フレームワーク:** Arduino
+    - **主要ライブラリ:**
+        - `Arduino-esp32`: ESP32コアライブラリ。
+        - `nanopb`: C言語ベースのProtobuf実装。
+
+### 8. ディレクトリ構造
+プロジェクトのソースコードやドキュメントは、以下の構造で管理する。
+
+```
+.
+├── README.md
+├── docs/               # (将来的に) 詳細ドキュメント
+├── firmware/           # ファームウェアのソースコード
+│   ├── master_hub/     # マスターハブ用
+│   └── sub_device/     # サブデバイス用
+├── pc_software/        # PC制御ソフトウェアのソースコード
+└── proto/              # Protobufスキーマ定義 (.protoファイル)
+```

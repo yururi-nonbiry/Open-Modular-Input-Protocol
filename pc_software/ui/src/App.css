@@ -1,0 +1,87 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34;
+  color: white;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-header {
+  padding: 20px;
+  border-bottom: 1px solid #444;
+  position: relative; /* For positioning the nav button */
+}
+
+.App-header nav {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+nav button {
+    background-color: #61dafb;
+    color: #282c34;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+nav button:hover {
+    background-color: #52b8d3;
+}
+
+main {
+  padding: 20px;
+}
+
+.card {
+  background-color: #3a3f4a;
+  border-radius: 8px;
+  padding: 1.5em;
+  max-width: 500px;
+  margin: 20px auto;
+  text-align: left;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.card p {
+  margin: 0.5em 0;
+}
+
+.card p strong {
+  color: #61dafbaa;
+  margin-right: 10px;
+}
+
+/* Styles for Settings View */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.status {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 4px;
+}

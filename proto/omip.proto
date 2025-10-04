@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package omip;
+
+// ラッパーメッセージ: すべてのメッセージはこのラッパーに含まれて送信される
+message WrapperMessage {
+  oneof message_type {
+    InputDigital input_digital = 1;
+    InputAnalog input_analog = 2;
+    InputEncoder input_encoder = 3;
+    FeedbackImage feedback_image = 4;
+    FeedbackLed feedback_led = 5;
+    SystemConfig system_config = 6;
+    DeviceCapabilityRequest capability_request = 7;
+    DeviceCapabilityResponse capability_response = 8;
+  }
+}
+
+// 1. デバイス → PC (入力データ)
+message InputDigital {
+  uint32 device_id = 1;
+  uint32 port_id = 2;
+  bool state = 3; // ON or OFF
+}
+
+message InputAnalog {
+  uint32 device_id = 1;
+  uint32 port_id = 2;
+  float value = 3; // 0.00 to 1.00
+}
+
+message InputEncoder {
+  uint32 device_id = 1;
+  uint32 port_id = 2;
+  sint32 steps = 3; // 正: 時計回り, 負: 反時計回り
+}
+
+// 2. PC → デバイス (フィードバック・制御)
+message FeedbackImage {
+  uint32 device_id = 1;
+  uint32 screen_id = 2;
+  enum ImageFormat {
+    RGB565_RLE = 0; // RLE圧縮されたRGB565
+    JPEG = 1;
+  }
+  ImageFormat format = 3;
+  bytes image_data = 4;
+}
+
+message FeedbackLed {
+  uint32 device_id = 1;
+  uint32 led_id = 2;
+  uint32 color_rgb = 3; // 24-bit RGB (0xRRGGBB)
+}
+
+message SystemConfig {
+  // (将来的な拡張のためのプレースホルダ)
+  // 例: ファームウェア更新命令など
+}
+
+// 3. デバイス能力定義
+message DeviceCapabilityRequest {
+  // マスターハブからサブデバイスへ能力を問い合わせる
+}
+
+message DeviceCapabilityResponse {
+  uint32 device_id = 1;
+  repeated PortDescription ports = 2;
+
+  message PortDescription {
+    enum PortType {
+      DIGITAL_INPUT = 0;
+      ANALOG_INPUT = 1;
+      ENCODER_INPUT = 2;
+      IMAGE_OUTPUT = 3;
+      LED_OUTPUT = 4;
+    }
+    PortType type = 1;
+    uint32 port_id = 2;
+    // 将来的な拡張: 解像度、感度など
+  }
+}

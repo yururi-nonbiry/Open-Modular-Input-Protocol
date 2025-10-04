@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OMIP - PC Controller</title>
+</head>
+<body>
+    <h1>Open-Modular-Input-Protocol PC Controller</h1>
+    <p>Check the browser's developer console for messages from the device.</p>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const sio = io();
+
+        sio.on('connect', () => {
+            console.log('Connected to backend server.');
+        });
+
+        sio.on('disconnect', () => {
+            console.log('Disconnected from backend server.');
+        });
+
+        // Listen for 'device_data' events from the server
+        sio.on('device_data', (data) => {
+            console.log('Received data from device:', data);
+            // We will later use this data to update the React UI
+        });
+    </script>
+</body>
+</html>

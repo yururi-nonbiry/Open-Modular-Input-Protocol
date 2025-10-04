@@ -1,0 +1,7 @@
+pyserial
+protobuf
+pynput
+fastapi
+uvicorn[standard]
+python-socketio
+Jinja2

@@ -1,0 +1,23 @@
+# General
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Python
+pc_software/venv/
+__pycache__/
+*.pyc
+
+# Protobuf intermediate file
+omip.pb
+
+# Node.js / Frontend (in pc_software/ui/)
+pc_software/ui/node_modules/
+pc_software/ui/dist/
+pc_software/ui/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
