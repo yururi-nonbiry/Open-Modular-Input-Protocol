@@ -211,3 +211,21 @@ message DeviceCapabilityResponse {
 - `pc_software/ui` フロントエンドのビルドには Node.js 18 以上が必須です。開発環境が WSL などで古い Node.js を参照している場合は、`npm run build` が `scripts/build.cjs` を介して Windows 側の `node.exe` (例: `C:\Program Files\nodejs\node.exe`) を自動選択します。
 - `scripts/build.cjs` は `tsc -b` → `vite build` → `electron-builder` の順に起動し、フロントエンドと Electron パッケージをまとめて生成します。個別にコマンドを実行する必要はありません。
 - Electron パッケージャーの設定では `win.signAndEditExecutable = false` としており、Windows でのシンボリックリンク作成やコードサイニングを強制しません。必要に応じて署名処理を行いたい場合は `package.json` の設定を調整してください。
+
+#### 9.2 バックエンド (Python)
+このプロジェクトのPythonスクリプトは、`pc_software`ディレクトリ内の`venv`という名前の仮想環境で実行します。
+環境のセットアップと依存関係のインストールは、以下のコマンドで行ってください。
+
+**Windows:**
+```shell
+python -m venv pc_software\venv
+pc_software\venv\Scripts\activate
+pip install -r pc_software\requirements.txt
+```
+
+**macOS / Linux:**
+```shell
+python3 -m venv pc_software/venv
+source pc_software/venv/bin/activate
+pip install -r pc_software/requirements.txt
+```
