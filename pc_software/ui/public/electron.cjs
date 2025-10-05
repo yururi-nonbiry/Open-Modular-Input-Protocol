@@ -12,8 +12,8 @@ function startPythonServer() {
 
     if (app.isPackaged) {
         // In production, the python executable and script are in the resources path
-        pythonExecutable = path.join(process.resourcesPath, 'app', 'venv', 'Scripts', 'python.exe');
-        pythonScript = path.join(process.resourcesPath, 'app', 'main.py');
+        pythonExecutable = path.join(process.resourcesPath, 'venv', 'Scripts', 'python.exe');
+        pythonScript = path.join(process.resourcesPath, 'main.py');
     } else {
         // In development, use relative paths
         pythonExecutable = path.join(__dirname, '../../venv/Scripts/python.exe');

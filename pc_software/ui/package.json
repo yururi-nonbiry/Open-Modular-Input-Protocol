@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "public/electron.js",
+  "main": "public/electron.cjs",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:react\" \"npm:dev:electron\"",
     "dev:react": "vite",
@@ -40,25 +40,25 @@
     "productName": "Open Modular Input Protocol",
     "files": [
       "build/**/*",
-      "public/electron.js",
+      "public/electron.cjs",
       "package.json"
     ],
     "extraResources": [
       {
         "from": "../venv",
-        "to": "app/venv"
+        "to": "venv"
       },
       {
         "from": "../main.py",
-        "to": "app/main.py"
+        "to": "main.py"
       },
       {
         "from": "../omip_pb2.py",
-        "to": "app/omip_pb2.py"
+        "to": "omip_pb2.py"
       },
       {
         "from": "../requirements.txt",
-        "to": "app/requirements.txt"
+        "to": "requirements.txt"
       }
     ],
     "win": {
