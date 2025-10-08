@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
+from bleak import BleakScanner
 
 import omip_pb2
 
@@ -17,6 +18,7 @@ class AppState:
     def __init__(self):
         self.serial_task = None
         self.selected_port = None
+        self.ble_scan_task = None
 
 state = AppState()
 
@@ -69,7 +71,7 @@ async def select_serial_port(sid, port_name):
     await sio.emit('port_changed', {'port': port_name}, to=sid)
 
 
-# --- バックグラウンドタスク (シリアル通信) ---
+# --- バックグラウンドタスク ---
 async def serial_reader_task(port_name: str):
     """指定されたシリアルポートから継続的にデータを読み取り、WebSocketで送信する"""
     ser = None
@@ -130,10 +132,42 @@ async def serial_reader_task(port_name: str):
             print(f"Serial port '{port_name}' closed.")
             await sio.emit('connection_status', {'status': 'disconnected'})
 
+async def scan_ble_devices_task():
+    """近くのBluetooth LEデバイスを継続的にスキャンし、UIに結果を送信する"""
+    while True:
+        try:
+            print("Scanning for BLE devices...")
+            # discover()はNoneを返すことがあるため、空リストでフォールバック
+            devices = await BleakScanner.discover(timeout=5.0) or []
+            device_list = [{'name': d.name, 'address': d.address} for d in devices if d.name]
+            if device_list:
+                print(f"Found {len(device_list)} BLE devices with names.")
+                await sio.emit('ble_devices', device_list)
+        except Exception as e:
+            print(f"Error during BLE scan: {e}")
+        
+        # 10秒待ってから再スキャン
+        await asyncio.sleep(10)
+
 # --- サーバー起動・メイン処理 ---
 @app.on_event("startup")
 async def startup_event():
-    print("Server started. Waiting for client to select a serial port.")
+    print("Server started.")
+    # BLEスキャンタスクを開始
+    state.ble_scan_task = asyncio.create_task(scan_ble_devices_task())
+    print("Started BLE scanning task.")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("Server is shutting down.")
+    if state.serial_task:
+        state.serial_task.cancel()
+    if state.ble_scan_task:
+        state.ble_scan_task.cancel()
+    
+    # タスクのクリーンアップを待機
+    await asyncio.sleep(1)
+    print("Background tasks cancelled.")
 
 if __name__ == "__main__":
     print("Starting web server at http://127.0.0.1:8000")

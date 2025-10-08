@@ -13,6 +13,11 @@ interface DeviceData {
   steps?: number;
 }
 
+interface BleDevice {
+  name: string;
+  address: string;
+}
+
 type View = 'main' | 'settings';
 
 const socket = io('http://127.0.0.1:8000');
@@ -20,6 +25,7 @@ const socket = io('http://127.0.0.1:8000');
 function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [lastMessage, setLastMessage] = useState<DeviceData | null>(null);
+  const [bleDevices, setBleDevices] = useState<BleDevice[]>([]);
   const [currentView, setCurrentView] = useState<View>('main');
 
   useEffect(() => {
@@ -37,15 +43,21 @@ function App() {
       setLastMessage(data);
     }
 
+    function onBleDevices(devices: BleDevice[]) {
+      setBleDevices(devices);
+    }
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('device_data', onDeviceData);
+    socket.on('ble_devices', onBleDevices);
 
     // Cleanup on component unmount
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('device_data', onDeviceData);
+      socket.off('ble_devices', onBleDevices);
     };
   }, []);
 
@@ -86,6 +98,21 @@ function App() {
       </header>
       <main>
         {renderView()}
+        <hr />
+        <div className="ble-scan-results">
+          <h2>Discovered BLE Devices:</h2>
+          {bleDevices.length > 0 ? (
+            <ul>
+              {bleDevices.map(device => (
+                <li key={device.address}>
+                  {device.name} <span>({device.address})</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Scanning for Bluetooth devices...</p>
+          )}
+        </div>
       </main>
     </div>
   );
