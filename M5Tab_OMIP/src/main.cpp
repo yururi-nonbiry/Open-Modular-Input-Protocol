@@ -83,44 +83,40 @@ void send_capability_response() {
 
 void draw_ui() {
     M5.Display.clear();
-    M5.Display.setTextSize(2);
+    M5.Display.setTextSize(3); // Use larger text size for buttons
 
     // --- Draw Layout ---
     int32_t screen_width = M5.Display.width();
     int32_t screen_height = M5.Display.height();
 
-    // --- Header ---
+    // --- Header with 4 buttons ---
     M5.Display.drawLine(0, HEADER_HEIGHT, screen_width, HEADER_HEIGHT, WHITE);
-    int32_t icon_y_center = HEADER_HEIGHT / 2;
+    int32_t button_width = screen_width / 4;
+    int32_t button_height = HEADER_HEIGHT - 1; // Leave 1px gap below buttons
+    int32_t text_y = HEADER_HEIGHT / 2;
 
-    // --- Volume Icon (Left) ---
-    int32_t volume_icon_x = 50;
-    M5.Display.fillRect(volume_icon_x - 10, icon_y_center - 7, 6, 14, WHITE); // Speaker base
-    M5.Display.fillTriangle(
-        volume_icon_x - 4, icon_y_center - 12,
-        volume_icon_x + 8, icon_y_center,
-        volume_icon_x - 4, icon_y_center + 12,
-        WHITE
-    );
-    M5.Display.drawChar('-', volume_icon_x - 35, icon_y_center - 8, 2);
-    M5.Display.drawChar('+', volume_icon_x + 20, icon_y_center - 8, 2);
+    M5.Display.setTextDatum(MC_DATUM); // Middle-Center datum
 
-    // --- Brightness Icon (Right) ---
-    int32_t brightness_icon_x = screen_width - 50;
-    M5.Display.drawCircle(brightness_icon_x, icon_y_center, 8, WHITE); // Sun body
-    for (int i = 0; i < 8; ++i) {
-        float angle = i * PI / 4;
-        int32_t x1 = brightness_icon_x + 11 * cos(angle);
-        int32_t y1 = icon_y_center + 11 * sin(angle);
-        int32_t x2 = brightness_icon_x + 13 * cos(angle);
-        int32_t y2 = icon_y_center + 13 * sin(angle);
-        M5.Display.drawLine(x1, y1, x2, y2, WHITE); // Sun rays
-    }
-    M5.Display.drawChar('-', brightness_icon_x - 35, icon_y_center - 8, 2);
-    M5.Display.drawChar('+', brightness_icon_x + 20, icon_y_center - 8, 2);
+    // Vol-
+    M5.Display.drawRect(0, 0, button_width, button_height, WHITE);
+    M5.Display.drawString("Vol-", button_width / 2, text_y);
 
+    // Vol+
+    M5.Display.drawRect(button_width, 0, button_width, button_height, WHITE);
+    M5.Display.drawString("Vol+", button_width + (button_width / 2), text_y);
+
+    // Brt-
+    M5.Display.drawRect(button_width * 2, 0, button_width, button_height, WHITE);
+    M5.Display.drawString("Brt-", button_width * 2 + (button_width / 2), text_y);
+
+    // Brt+
+    M5.Display.drawRect(button_width * 3, 0, button_width, button_height, WHITE);
+    M5.Display.drawString("Brt+", button_width * 3 + (button_width / 2), text_y);
+
+    M5.Display.setTextDatum(TL_DATUM); // Reset datum to Top-Left for safety
 
     // --- Grid ---
+    M5.Display.setTextSize(2); // Reset text size
     int32_t grid_area_width = screen_width;
     int32_t available_height = screen_height - HEADER_HEIGHT;
     int32_t grid_height = (grid_area_width * GRID_ROWS) / GRID_COLS;

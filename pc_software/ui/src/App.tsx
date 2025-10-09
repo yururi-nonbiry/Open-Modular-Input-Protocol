@@ -94,7 +94,7 @@ function App() {
             {currentView === 'main' ? 'Go to Settings' : 'Back to Main'}
           </button>
         </nav>
-        <p>Connection Status: {isConnected ? 'Connected' : 'Disconnected'}</p>
+        <p style={{ marginBottom: 0 }}>Connection Status: {isConnected ? 'Connected' : 'Disconnected'}</p>
       </header>
       <main>
         {renderView()}
