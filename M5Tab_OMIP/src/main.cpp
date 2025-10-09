@@ -1,4 +1,5 @@
 #include <M5Unified.h>
+#include <cmath>
 #include "omip.pb.h"
 #include "pb_decode.h"
 #include "pb_encode.h"
@@ -88,19 +89,40 @@ void draw_ui() {
     int32_t screen_width = M5.Display.width();
     int32_t screen_height = M5.Display.height();
 
-    // Header
+    // --- Header ---
     M5.Display.drawLine(0, HEADER_HEIGHT, screen_width, HEADER_HEIGHT, WHITE);
-    M5.Display.setCursor(10, 10);
-    M5.Display.print("Waiting for request...");
+    int32_t icon_y_center = HEADER_HEIGHT / 2;
 
-    // Grid Area Calculation (to make cells square)
-    int32_t grid_area_width = screen_width; // Use full width
+    // --- Volume Icon (Left) ---
+    int32_t volume_icon_x = 50;
+    M5.Display.fillRect(volume_icon_x - 10, icon_y_center - 7, 6, 14, WHITE); // Speaker base
+    M5.Display.fillTriangle(
+        volume_icon_x - 4, icon_y_center - 12,
+        volume_icon_x + 8, icon_y_center,
+        volume_icon_x - 4, icon_y_center + 12,
+        WHITE
+    );
+    M5.Display.drawChar('-', volume_icon_x - 35, icon_y_center - 8, 2);
+    M5.Display.drawChar('+', volume_icon_x + 20, icon_y_center - 8, 2);
+
+    // --- Brightness Icon (Right) ---
+    int32_t brightness_icon_x = screen_width - 50;
+    M5.Display.drawCircle(brightness_icon_x, icon_y_center, 8, WHITE); // Sun body
+    for (int i = 0; i < 8; ++i) {
+        float angle = i * PI / 4;
+        int32_t x1 = brightness_icon_x + 11 * cos(angle);
+        int32_t y1 = icon_y_center + 11 * sin(angle);
+        int32_t x2 = brightness_icon_x + 13 * cos(angle);
+        int32_t y2 = icon_y_center + 13 * sin(angle);
+        M5.Display.drawLine(x1, y1, x2, y2, WHITE); // Sun rays
+    }
+    M5.Display.drawChar('-', brightness_icon_x - 35, icon_y_center - 8, 2);
+    M5.Display.drawChar('+', brightness_icon_x + 20, icon_y_center - 8, 2);
+
+
+    // --- Grid ---
+    int32_t grid_area_width = screen_width;
     int32_t available_height = screen_height - HEADER_HEIGHT;
-    
-    // To make cells square, cell_width should equal cell_height.
-    // cell_width = grid_area_width / GRID_COLS
-    // cell_height = grid_height / GRID_ROWS
-    // Let cell_width = cell_height, so grid_height = (grid_area_width / GRID_COLS) * GRID_ROWS
     int32_t grid_height = (grid_area_width * GRID_ROWS) / GRID_COLS;
     int32_t y_offset = HEADER_HEIGHT + (available_height - grid_height) / 2;
 
@@ -121,7 +143,7 @@ void draw_ui() {
 void setup() {
   auto cfg = M5.config();
   M5.begin(cfg);
-  M5.Display.setRotation(1);
+  M5.Display.setRotation(3);
 
   draw_ui();
 
