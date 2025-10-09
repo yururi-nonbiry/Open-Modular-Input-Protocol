@@ -2,8 +2,6 @@
 このアプリケーションは日本語としてください
 ユーザーへのメッセージは日本語で送信してください
 
-## コマンド実行について
-コマンドを実行するときは docker compose run を使用してください
 
 ## 仕様について
 readme.mdに仕様が書かれているので最初に把握してください
@@ -27,5 +25,5 @@ source pc_software/venv/bin/activate
 pip install -r pc_software/requirements.txt
 ```
 
-## タスクの管理について
+## タスクの管理について」
 task.mdにタスクを記載してください

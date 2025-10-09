@@ -3,6 +3,11 @@
 #include "pb_decode.h"
 #include "pb_encode.h"
 
+// --- UI Configuration ---
+#define HEADER_HEIGHT 30
+#define GRID_ROWS 3
+#define GRID_COLS 6
+
 // --- OMIP Configuration ---
 #define DEVICE_ID 1
 
@@ -75,14 +80,50 @@ void send_capability_response() {
     }
 }
 
+void draw_ui() {
+    M5.Display.clear();
+    M5.Display.setTextSize(2);
+
+    // --- Draw Layout ---
+    int32_t screen_width = M5.Display.width();
+    int32_t screen_height = M5.Display.height();
+
+    // Header
+    M5.Display.drawLine(0, HEADER_HEIGHT, screen_width, HEADER_HEIGHT, WHITE);
+    M5.Display.setCursor(10, 10);
+    M5.Display.print("Waiting for request...");
+
+    // Grid Area Calculation (to make cells square)
+    int32_t grid_area_width = screen_width; // Use full width
+    int32_t available_height = screen_height - HEADER_HEIGHT;
+    
+    // To make cells square, cell_width should equal cell_height.
+    // cell_width = grid_area_width / GRID_COLS
+    // cell_height = grid_height / GRID_ROWS
+    // Let cell_width = cell_height, so grid_height = (grid_area_width / GRID_COLS) * GRID_ROWS
+    int32_t grid_height = (grid_area_width * GRID_ROWS) / GRID_COLS;
+    int32_t y_offset = HEADER_HEIGHT + (available_height - grid_height) / 2;
+
+    // Vertical lines
+    for (int i = 1; i < GRID_COLS; i++) {
+        int32_t x = (grid_area_width * i) / GRID_COLS;
+        M5.Display.drawLine(x, y_offset, x, y_offset + grid_height, WHITE);
+    }
+    // Horizontal lines
+    for (int i = 1; i < GRID_ROWS; i++) {
+        int32_t y = y_offset + (grid_height * i) / GRID_ROWS;
+        M5.Display.drawLine(0, y, grid_area_width, y, WHITE);
+    }
+    // Draw outer box for the grid to make it a complete wireframe
+    M5.Display.drawRect(0, y_offset, grid_area_width, grid_height, WHITE);
+}
+
 void setup() {
   auto cfg = M5.config();
   M5.begin(cfg);
+  M5.Display.setRotation(1);
 
-  M5.Display.setTextSize(2);
-  M5.Display.setCursor(10, 10);
-  M5.Display.println("OMIP Device Ready");
-  M5.Display.println("Waiting for request...");
+  draw_ui();
 
   Serial.begin(115200);
   Serial.println("M5Tab OMIP Initialized.");
@@ -93,16 +134,22 @@ void loop() {
 
   if (Serial.available() > 0) {
     uint8_t buffer[128];
-    size_t len = Serial.readBytes(buffer, sizeof(buffer));
+    // Read size byte first
+    size_t size_byte = Serial.read();
+    if (size_byte > 0) {
+        size_t len = Serial.readBytes(buffer, size_byte);
 
-    if (len > 0) {
-        omip_WrapperMessage received_message = omip_WrapperMessage_init_zero;
-        pb_istream_t stream = pb_istream_from_buffer(buffer, len);
+        if (len == size_byte) {
+            omip_WrapperMessage received_message = omip_WrapperMessage_init_zero;
+            pb_istream_t stream = pb_istream_from_buffer(buffer, len);
 
-        if (pb_decode(&stream, omip_WrapperMessage_fields, &received_message)) {
-            if (received_message.which_message_type == omip_WrapperMessage_capability_request_tag) {
-                M5.Display.println("Caps Req Received!");
-                send_capability_response();
+            if (pb_decode(&stream, omip_WrapperMessage_fields, &received_message)) {
+                if (received_message.which_message_type == omip_WrapperMessage_capability_request_tag) {
+                    M5.Display.fillRect(0, 0, M5.Display.width(), HEADER_HEIGHT, BLACK);
+                    M5.Display.setCursor(10, 10);
+                    M5.Display.print("Caps Req Received!");
+                    send_capability_response();
+                }
             }
         }
     }

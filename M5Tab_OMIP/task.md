@@ -8,13 +8,13 @@
 
 ## Milestone 1: 基本機能の実装
 
-- [ ] **仕様の定義と機能通知**
-    - [ ] `DeviceCapabilityResponse`で通知するポートを定義する。
+- [x] **仕様の定義と機能通知**
+    - [x] `DeviceCapabilityResponse`で通知するポートを定義する。
         - メインエリア (3x6グリッド): `DIGITAL_INPUT` x 18個 (port_id: 0-17)
         - サイドバー (音量調整): `ANALOG_INPUT` x 1個 (port_id: 18)
         - ページ切り替え (左右スワイプ): `DIGITAL_INPUT` x 2個 (port_id: 19, 20)
         - LCD画面: `IMAGE_OUTPUT` x 1個 (screen_id: 0)
-    - [ ] PCから`DeviceCapabilityRequest`を受信したら、上記の仕様を詰めた`DeviceCapabilityResponse`を返信する処理を実装する。
+    - [x] PCから`DeviceCapabilityRequest`を受信したら、上記の仕様を詰めた`DeviceCapabilityResponse`を返信する処理を実装する。
 
 - [ ] **基本UIの描画**
     - [ ] `setup()`で、画面に3x6のグリッド、ヘッダー、サイドバーの領域を線で描画する。
