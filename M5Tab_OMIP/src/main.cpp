@@ -1,13 +1,16 @@
 #include <M5Unified.h>
+#include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include "omip.pb.h"
 #include "pb_decode.h"
 #include "pb_encode.h"
 
 // --- UI Configuration ---
-#define HEADER_HEIGHT 30
-#define GRID_ROWS 3
-#define GRID_COLS 6
+constexpr int32_t GRID_ROWS = 3;
+constexpr int32_t GRID_COLS = 6;
+constexpr int32_t MIN_HEADER_HEIGHT = 40;
+int32_t g_headerHeight = MIN_HEADER_HEIGHT;
 
 // --- OMIP Configuration ---
 #define DEVICE_ID 1
@@ -88,12 +91,21 @@ void draw_ui() {
     // --- Draw Layout ---
     int32_t screen_width = M5.Display.width();
     int32_t screen_height = M5.Display.height();
+    int32_t grid_area_width = screen_width;
+    int32_t grid_height = (grid_area_width * GRID_ROWS) / GRID_COLS;
+    int32_t available_for_header = screen_height - grid_height;
+    if (available_for_header < MIN_HEADER_HEIGHT) {
+        g_headerHeight = std::min<int32_t>(MIN_HEADER_HEIGHT, screen_height);
+        grid_height = std::max<int32_t>(0, screen_height - g_headerHeight);
+    } else {
+        g_headerHeight = available_for_header;
+    }
 
     // --- Header with 4 buttons ---
-    M5.Display.drawLine(0, HEADER_HEIGHT, screen_width, HEADER_HEIGHT, WHITE);
+    M5.Display.drawLine(0, g_headerHeight, screen_width, g_headerHeight, WHITE);
     int32_t button_width = screen_width / 4;
-    int32_t button_height = HEADER_HEIGHT - 1; // Leave 1px gap below buttons
-    int32_t text_y = HEADER_HEIGHT / 2;
+    int32_t button_height = g_headerHeight; // Use full header height
+    int32_t text_y = g_headerHeight / 2;
 
     M5.Display.setTextDatum(MC_DATUM); // Middle-Center datum
 
@@ -117,10 +129,7 @@ void draw_ui() {
 
     // --- Grid ---
     M5.Display.setTextSize(2); // Reset text size
-    int32_t grid_area_width = screen_width;
-    int32_t available_height = screen_height - HEADER_HEIGHT;
-    int32_t grid_height = (grid_area_width * GRID_ROWS) / GRID_COLS;
-    int32_t y_offset = HEADER_HEIGHT + (available_height - grid_height) / 2;
+    int32_t y_offset = g_headerHeight; // Anchor grid directly beneath the header
 
     // Vertical lines
     for (int i = 1; i < GRID_COLS; i++) {
@@ -163,7 +172,7 @@ void loop() {
 
             if (pb_decode(&stream, omip_WrapperMessage_fields, &received_message)) {
                 if (received_message.which_message_type == omip_WrapperMessage_capability_request_tag) {
-                    M5.Display.fillRect(0, 0, M5.Display.width(), HEADER_HEIGHT, BLACK);
+                    M5.Display.fillRect(0, 0, M5.Display.width(), g_headerHeight, BLACK);
                     M5.Display.setCursor(10, 10);
                     M5.Display.print("Caps Req Received!");
                     send_capability_response();
