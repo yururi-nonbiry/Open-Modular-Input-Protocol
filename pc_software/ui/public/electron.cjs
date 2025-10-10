@@ -1,10 +1,33 @@
-const { app, BrowserWindow, Tray, Menu } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const robot = require('robotjs');
 
 let tray = null;
 let win = null;
 let pythonProcess = null;
+let currentVolume = 0.5; // Initial assumed volume
+let windowWatcherInterval = null;
+
+async function startWindowWatcher() {
+    let lastActiveApp = null;
+    const { activeWin } = await import('active-win');
+
+    windowWatcherInterval = setInterval(async () => {
+        try {
+            const active = await activeWin();
+            if (active && active.owner.name !== lastActiveApp) {
+                lastActiveApp = active.owner.name;
+                console.log(`Active window changed to: ${lastActiveApp}`);
+                if (win) {
+                    win.webContents.send('active-window-changed', lastActiveApp);
+                }
+            }
+        } catch (e) {
+            console.error("Could not get active window:", e);
+        }
+    }, 1000);
+}
 
 // Function to start the Python server
 function startPythonServer() {
@@ -42,8 +65,9 @@ function createWindow() {
         height: 600,
         show: false, // Hide the window initially
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false, // It's recommended to turn this on for security, but for this example, we'll keep it simple.
+            preload: path.join(__dirname, 'preload.cjs'),
+            contextIsolation: true,
+            nodeIntegration: false,
         },
     });
 
@@ -100,6 +124,41 @@ app.whenReady().then(() => {
     startPythonServer();
     createWindow();
     createTray();
+    startWindowWatcher();
+
+    ipcMain.on('execute-shortcut', (event, shortcut) => {
+        try {
+            console.log(`Received shortcut to execute: ${shortcut}`);
+            const keys = shortcut.toLowerCase().split('+').map(k => k.trim());
+            const mainKey = keys.pop();
+            const modifiers = keys;
+            
+            if (mainKey) {
+                robot.keyTap(mainKey, modifiers);
+                console.log(`Executed: keyTap("${mainKey}", [${modifiers.join(', ')}])`);
+            }
+        } catch (e) {
+            console.error("Failed to execute shortcut:", e);
+        }
+    });
+
+    ipcMain.on('set-volume', (event, volume) => {
+        try {
+            // A simple approach: tap up or down based on change.
+            // A more robust solution would involve getting actual system volume.
+            const volumeThreshold = 0.05; // Only change if difference is significant
+            if (volume > currentVolume + volumeThreshold) {
+                robot.keyTap('audio_vol_up');
+                console.log('Volume up');
+            } else if (volume < currentVolume - volumeThreshold) {
+                robot.keyTap('audio_vol_down');
+                console.log('Volume down');
+            }
+            currentVolume = volume;
+        } catch (e) {
+            console.error("Failed to set volume:", e);
+        }
+    });
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -122,5 +181,8 @@ app.on('will-quit', () => {
     if (pythonProcess) {
         pythonProcess.kill();
         pythonProcess = null;
+    }
+    if (windowWatcherInterval) {
+        clearInterval(windowWatcherInterval);
     }
 });

@@ -1,122 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Socket } from 'socket.io-client';
+import ConnectionSettings from './ConnectionSettings';
+import ThemeSettings from './ThemeSettings';
+import DeviceSettings from './DeviceSettings';
 
-interface Port {
-  device: string;
-  description: string;
+// Define the structure of the data received from the backend
+interface DeviceData {
+    type: 'digital' | 'analog' | 'encoder';
+    device_id: number;
+    port_id: number;
+    state?: boolean;
+    value?: number;
+    steps?: number;
+}
+
+interface BleDevice {
+    name: string;
+    address: string;
 }
 
 interface SettingsProps {
   socket: Socket;
+  activeDevices: { [key: string]: DeviceData };
+  bleDevices: BleDevice[];
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
 }
 
-const PortSelector: React.FC<{
-  ports: Port[];
-  selectedPort: string;
-  onPortChange: (port: string) => void;
-  onRefresh: () => void;
-}> = ({ ports, selectedPort, onPortChange, onRefresh }) => (
-  <div className="form-group">
-    <label htmlFor="port-select">Available Ports:</label>
-    <div className="port-selector-row">
-      <select id="port-select" value={selectedPort} onChange={(e) => onPortChange(e.target.value)} disabled={ports.length === 0}>
-        {ports.length > 0 ? (
-          ports.map((port) => (
-            <option key={port.device} value={port.device}>
-              {port.device} - {port.description}
-            </option>
-          ))
-        ) : (
-          <option value="" disabled>No ports found</option>
-        )}
-      </select>
-      <button onClick={onRefresh} className="button-outline">Refresh</button>
-    </div>
-  </div>
-);
+type Tab = 'connection' | 'appearance' | 'devices';
 
-const ConnectionManager: React.FC<{
-  selectedPort: string;
-  status: string;
-  onConnect: () => void;
-}> = ({ selectedPort, status, onConnect }) => {
-    const getStatusClass = () => {
-        if (status.startsWith('Connected')) return 'status-connected';
-        if (status.startsWith('Error')) return 'status-error';
-        return 'status-disconnected';
-    };
-
-    return (
-        <>
-            <button onClick={onConnect} disabled={!selectedPort} className="button-primary">Connect</button>
-            <div className={`status ${getStatusClass()}`}>
-                <p><strong>Status:</strong> {status}</p>
-            </div>
-        </>
-    );
-};
-
-
-const Settings: React.FC<SettingsProps> = ({ socket }) => {
-  const [ports, setPorts] = useState<Port[]>([]);
-  const [selectedPort, setSelectedPort] = useState<string>('');
-  const [status, setStatus] = useState('Awaiting selection...');
-
-  useEffect(() => {
-    // Request the port list on component mount
-    socket.emit('get_serial_ports');
-
-    const handleSerialPorts = (portList: Port[]) => {
-      setPorts(portList);
-      if (portList.length > 0 && !selectedPort) {
-        setSelectedPort(portList[0].device);
-      }
-    };
-
-    const handleConnectionStatus = (data: { status: string; port?: string; message?: string }) => {
-        if (data.status === 'connected') {
-            setStatus(`Connected to ${data.port}`);
-        } else if (data.status === 'disconnected') {
-            setStatus('Disconnected');
-        } else if (data.status === 'error') {
-            setStatus(`Error: ${data.message}`);
-        }
-    };
-
-    socket.on('serial_ports', handleSerialPorts);
-    socket.on('connection_status', handleConnectionStatus);
-
-    return () => {
-      socket.off('serial_ports', handleSerialPorts);
-      socket.off('connection_status', handleConnectionStatus);
-    };
-  }, [socket, selectedPort]);
-
-  const handleRefresh = () => {
-    socket.emit('get_serial_ports');
-  };
-
-  const handleConnect = () => {
-    if (selectedPort) {
-      setStatus(`Connecting to ${selectedPort}...`);
-      socket.emit('select_serial_port', selectedPort);
-    }
-  };
+const Settings: React.FC<SettingsProps> = ({ socket, activeDevices, bleDevices, currentPage, setCurrentPage }) => {
+  const [activeTab, setActiveTab] = useState<Tab>('connection');
 
   return (
     <div className="card settings-card">
-      <h2>Serial Port Settings</h2>
-      <PortSelector
-        ports={ports}
-        selectedPort={selectedPort}
-        onPortChange={setSelectedPort}
-        onRefresh={handleRefresh}
-      />
-      <ConnectionManager
-        selectedPort={selectedPort}
-        status={status}
-        onConnect={handleConnect}
-      />
+      <div className="settings-tabs">
+        <button 
+          className={`tab-button ${activeTab === 'connection' ? 'active' : ''}`}
+          onClick={() => setActiveTab('connection')}
+        >
+          Connection
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'appearance' ? 'active' : ''}`}
+          onClick={() => setActiveTab('appearance')}
+        >
+          Appearance
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'devices' ? 'active' : ''}`}
+          onClick={() => setActiveTab('devices')}
+        >
+          Devices
+        </button>
+      </div>
+      <div className="settings-content">
+        {activeTab === 'connection' && <ConnectionSettings socket={socket} bleDevices={bleDevices} />}
+        {activeTab === 'appearance' && <ThemeSettings />}
+        {activeTab === 'devices' && <DeviceSettings activeDevices={activeDevices} socket={socket} currentPage={currentPage} setCurrentPage={setCurrentPage} />}
+      </div>
     </div>
   );
 };

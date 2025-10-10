@@ -163,3 +163,224 @@ main {
     background-color: #dc354533;
     border-left: 5px solid #dc3545;
 }
+
+/* Styles for Settings Tabs */
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid #444;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  cursor: pointer;
+  background-color: transparent;
+  border: none;
+  color: #ccc;
+  font-size: 1em;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+.tab-button.active {
+  color: #61dafb;
+  border-bottom-color: #61dafb;
+}
+
+.tab-button:hover {
+  background-color: #ffffff11;
+}
+
+.settings-content h2 {
+    margin-top: 0;
+    color: #61dafb;
+    border-bottom: 2px solid #61dafb22;
+    padding-bottom: 10px;
+}
+
+/* Light Theme Styles */
+body[data-theme='light'] {
+  background-color: #f0f2f5;
+  color: #1c1e21;
+}
+
+body[data-theme='light'] .App-header {
+  border-bottom-color: #dcdfe6;
+}
+
+body[data-theme='light'] nav button {
+  background-color: #007bff;
+  color: white;
+}
+
+body[data-theme='light'] nav button:hover {
+  background-color: #0056b3;
+}
+
+body[data-theme='light'] .card, 
+body[data-theme='light'] .device-card {
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+body[data-theme='light'] .card p strong {
+  color: #007bff;
+}
+
+body[data-theme='light'] .settings-card h2 {
+  color: #007bff;
+  border-bottom-color: #007bff33;
+}
+
+body[data-theme='light'] .form-group label {
+  color: #495057;
+}
+
+body[data-theme='light'] .form-group select {
+  background-color: #ffffff;
+  color: #495057;
+  border-color: #ced4da;
+}
+
+body[data-theme='light'] .form-group select:disabled {
+  background-color: #e9ecef;
+}
+
+body[data-theme='light'] .button-primary {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+body[data-theme='light'] .button-primary:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+body[data-theme='light'] .button-outline {
+  color: #007bff;
+  border-color: #007bff;
+}
+
+body[data-theme='light'] .button-outline:hover {
+  background-color: #007bff11;
+}
+
+body[data-theme='light'] .status-connected {
+  background-color: #d4edda;
+  border-left-color: #28a745;
+}
+
+body[data-theme='light'] .status-disconnected {
+  background-color: #e2e3e5;
+  border-left-color: #6c757d;
+}
+
+body[data-theme='light'] .status-error {
+  background-color: #f8d7da;
+  border-left-color: #dc3545;
+}
+
+body[data-theme='light'] .card-header {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+body[data-theme='light'] .analog-bar-container {
+  background-color: #e9ecef;
+}
+
+body[data-theme='light'] .analog-bar {
+  background-color: #007bff;
+}
+
+body[data-theme='light'] .analog-bar-container span {
+  color: #1c1e21;
+  text-shadow: none;
+}
+
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.device-card {
+  background-color: #3a3f4a;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  overflow: hidden; /* Ensures the header and content are contained */
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  background-color: #4a5a63;
+  padding: 10px 15px;
+  font-weight: bold;
+  color: #e0e0e0;
+  font-size: 0.9em;
+}
+
+.card-content {
+  padding: 15px;
+  font-size: 1.2em;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.digital-state {
+  padding: 5px 15px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.digital-state.on {
+  background-color: #28a745;
+  color: white;
+}
+
+.digital-state.off {
+  background-color: #dc3545;
+  color: white;
+}
+
+.analog-bar-container {
+  width: 100%;
+  height: 30px;
+  background-color: #282c34;
+  border-radius: 5px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.analog-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background-color: #61dafb;
+  transition: width 0.1s ease-in-out;
+}
+
+.analog-bar-container span {
+  z-index: 1;
+  color: white;
+  text-shadow: 1px 1px 2px black;
+  font-weight: bold;
+}
+
+.device-card.active {
+  border: 2px solid #61dafb;
+  box-shadow: 0 0 15px #61dafb88;
+}
+
+body[data-theme='light'] .device-card.active {
+  border: 2px solid #007bff;
+  box-shadow: 0 0 15px #007bff88;
+}
