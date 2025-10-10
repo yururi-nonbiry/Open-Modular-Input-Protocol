@@ -31,7 +31,7 @@ NimBLECharacteristic* pFeedbackCharacteristic = nullptr;
 constexpr int32_t GRID_ROWS = 3;
 constexpr int32_t GRID_COLS = 6;
 constexpr int32_t MIN_HEADER_HEIGHT = 40;
-constexpr float SIDEBAR_WIDTH_RATIO = 0.2f;
+constexpr float SIDEBAR_WIDTH_RATIO = 0.0f;
 int32_t g_headerHeight = MIN_HEADER_HEIGHT;
 float g_current_volume = 0.5f;
 #define DEVICE_ID 1
