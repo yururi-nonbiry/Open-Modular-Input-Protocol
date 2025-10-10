@@ -74,6 +74,28 @@ struct SwipeState {
 
 SwipeState g_swipe_state;
 
+namespace {
+constexpr size_t kMaxCapabilityPorts = 22; // 18 grid + 1 analog + 2 swipe + 1 screen
+
+struct CapabilityPortsPayload {
+    omip_DeviceCapabilityResponse_PortDescription ports[kMaxCapabilityPorts];
+    size_t count = 0;
+};
+} // namespace
+
+static bool encode_capability_ports(pb_ostream_t* stream, const pb_field_t* field, void* const* arg) {
+    const CapabilityPortsPayload* payload = static_cast<const CapabilityPortsPayload*>(*arg);
+    for (size_t i = 0; i < payload->count; ++i) {
+        if (!pb_encode_tag_for_field(stream, field)) {
+            return false;
+        }
+        if (!pb_encode_submessage(stream, omip_DeviceCapabilityResponse_PortDescription_fields, &payload->ports[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // --- Function Prototypes ---
 void handle_feedback_data(const uint8_t* buffer, size_t len);
 void draw_ui();
@@ -151,12 +173,58 @@ void send_analog_input(uint32_t port_id, float value) {
 }
 
 // --- Data Handling & UI ---
-void handle_feedback_data(const uint8_t* buffer, size_t len) {
-    omip_WrapperMessage received_message = omip_WrapperMessage_init_zero;
-    pb_istream_t stream = pb_istream_from_buffer(buffer, len);
-    if (pb_decode(&stream, omip_WrapperMessage_fields, &received_message)) {
-        if (received_message.which_message_type == omip_WrapperMessage_feedback_image_tag) {
+void send_capability_response() {
+    omip_WrapperMessage wrapper = omip_WrapperMessage_init_zero;
+    wrapper.which_message_type = omip_WrapperMessage_capability_response_tag;
+    omip_DeviceCapabilityResponse *cap_response = &wrapper.message_type.capability_response;
+
+    cap_response->device_id = DEVICE_ID;
+
+    CapabilityPortsPayload payload;
+
+    auto add_port = [&payload](uint32_t port_id, omip_DeviceCapabilityResponse_PortDescription_PortType type) {
+        if (payload.count >= kMaxCapabilityPorts) {
+            return;
+        }
+        payload.ports[payload.count].port_id = port_id;
+        payload.ports[payload.count].type = type;
+        payload.count++;
+    };
+
+    // Grid: 18 digital inputs (0-17)
+    for (uint32_t i = 0; i < 18; ++i) {
+        add_port(i, omip_DeviceCapabilityResponse_PortDescription_PortType_DIGITAL_INPUT);
+    }
+
+    // Sidebar: 1 analog input (18)
+    add_port(PORT_ANALOG_VOLUME, omip_DeviceCapabilityResponse_PortDescription_PortType_ANALOG_INPUT);
+
+    // Swipe: 2 digital inputs (19, 20)
+    add_port(PORT_SWIPE_LEFT, omip_DeviceCapabilityResponse_PortDescription_PortType_DIGITAL_INPUT);
+    add_port(PORT_SWIPE_RIGHT, omip_DeviceCapabilityResponse_PortDescription_PortType_DIGITAL_INPUT);
+
+    // Screen: 1 image output (port 100)
+    add_port(100, omip_DeviceCapabilityResponse_PortDescription_PortType_IMAGE_OUTPUT);
+
+    cap_response->ports.funcs.encode = encode_capability_ports;
+    cap_response->ports.arg = &payload;
+
+    send_omip_message(wrapper);
+}
+
+void handle_incoming_message(omip_WrapperMessage& msg) {
+    switch (msg.which_message_type) {
+        case omip_WrapperMessage_capability_request_tag: {
+            send_capability_response();
+            break;
+        }
+        case omip_WrapperMessage_feedback_image_tag: {
             // ... (Icon caching and drawing logic is omitted for this step)
+            break;
+        }
+        default: {
+            // Unsupported message type
+            break;
         }
     }
 }
@@ -390,13 +458,34 @@ void loop() {
   handle_touch();
   handle_gesture();
 
-  if (!g_ble_connected && Serial.available() > 0) {
-    if (Serial.read() == '~') {
+  // Handle incoming serial data
+  if (Serial.available() > 0) {
+    if (Serial.read() == '~') { // Start of frame
+        // Wait for the length byte with a timeout
+        unsigned long startTime = millis();
+        while (Serial.available() < 1) {
+            if (millis() - startTime > 100) { // 100ms timeout
+                return; // Timeout waiting for length
+            }
+        }
         size_t len = Serial.read();
+
         if (len > 0) {
-            uint8_t buffer[4096];
+            uint8_t buffer[256]; // Max message size
+            // Wait for the full message with a timeout
+            startTime = millis();
+            while (Serial.available() < len) {
+                if (millis() - startTime > 500) { // 500ms timeout
+                    return; // Timeout waiting for data
+                }
+            }
             Serial.readBytes(buffer, len);
-            handle_feedback_data(buffer, len);
+
+            omip_WrapperMessage received_message = omip_WrapperMessage_init_zero;
+            pb_istream_t stream = pb_istream_from_buffer(buffer, len);
+            if (pb_decode(&stream, omip_WrapperMessage_fields, &received_message)) {
+                handle_incoming_message(received_message);
+            }
         }
     }
   }
