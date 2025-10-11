@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package omip;
 
+import "nanopb.proto";
+
 message WrapperMessage {
   oneof message_type {
     InputDigital input_digital = 1;
@@ -41,7 +43,10 @@ message FeedbackImage {
     JPEG = 1;
   }
   ImageFormat format = 3;
-  bytes image_data = 4;
+  uint32 total_size = 4;
+  uint32 chunk_offset = 5;
+  bytes chunk_data = 6 [(nanopb).max_size = 200];
+  bool is_last_chunk = 7;
 }
 
 message FeedbackLed {

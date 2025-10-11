@@ -22,37 +22,40 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+import nanopb_pb2 as nanopb__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nomip.proto\x12\x04omip\"\xa8\x03\n\x0eWrapperMessage\x12+\n\rinput_digital\x18\x01 \x01(\x0b\x32\x12.omip.InputDigitalH\x00\x12)\n\x0cinput_analog\x18\x02 \x01(\x0b\x32\x11.omip.InputAnalogH\x00\x12+\n\rinput_encoder\x18\x03 \x01(\x0b\x32\x12.omip.InputEncoderH\x00\x12-\n\x0e\x66\x65\x65\x64\x62\x61\x63k_image\x18\x04 \x01(\x0b\x32\x13.omip.FeedbackImageH\x00\x12)\n\x0c\x66\x65\x65\x64\x62\x61\x63k_led\x18\x05 \x01(\x0b\x32\x11.omip.FeedbackLedH\x00\x12+\n\rsystem_config\x18\x06 \x01(\x0b\x32\x12.omip.SystemConfigH\x00\x12;\n\x12\x63\x61pability_request\x18\x07 \x01(\x0b\x32\x1d.omip.DeviceCapabilityRequestH\x00\x12=\n\x13\x63\x61pability_response\x18\x08 \x01(\x0b\x32\x1e.omip.DeviceCapabilityResponseH\x00\x42\x0e\n\x0cmessage_type\"A\n\x0cInputDigital\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x0f\n\x07port_id\x18\x02 \x01(\r\x12\r\n\x05state\x18\x03 \x01(\x08\"@\n\x0bInputAnalog\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x0f\n\x07port_id\x18\x02 \x01(\r\x12\r\n\x05value\x18\x03 \x01(\x02\"A\n\x0cInputEncoder\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x0f\n\x07port_id\x18\x02 \x01(\r\x12\r\n\x05steps\x18\x03 \x01(\x11\"\xa3\x01\n\rFeedbackImage\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x11\n\tscreen_id\x18\x02 \x01(\r\x12/\n\x06\x66ormat\x18\x03 \x01(\x0e\x32\x1f.omip.FeedbackImage.ImageFormat\x12\x12\n\nimage_data\x18\x04 \x01(\x0c\"\'\n\x0bImageFormat\x12\x0e\n\nRGB565_RLE\x10\x00\x12\x08\n\x04JPEG\x10\x01\"C\n\x0b\x46\x65\x65\x64\x62\x61\x63kLed\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x0e\n\x06led_id\x18\x02 \x01(\r\x12\x11\n\tcolor_rgb\x18\x03 \x01(\r\"\x0e\n\x0cSystemConfig\"\x19\n\x17\x44\x65viceCapabilityRequest\"\xbe\x02\n\x18\x44\x65viceCapabilityResponse\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12=\n\x05ports\x18\x02 \x03(\x0b\x32..omip.DeviceCapabilityResponse.PortDescription\x1a\xcf\x01\n\x0fPortDescription\x12\x45\n\x04type\x18\x01 \x01(\x0e\x32\x37.omip.DeviceCapabilityResponse.PortDescription.PortType\x12\x0f\n\x07port_id\x18\x02 \x01(\r\"d\n\x08PortType\x12\x11\n\rDIGITAL_INPUT\x10\x00\x12\x10\n\x0c\x41NALOG_INPUT\x10\x01\x12\x11\n\rENCODER_INPUT\x10\x02\x12\x10\n\x0cIMAGE_OUTPUT\x10\x03\x12\x0e\n\nLED_OUTPUT\x10\x04\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nomip.proto\x12\x04omip\x1a\x0cnanopb.proto\"\xa8\x03\n\x0eWrapperMessage\x12+\n\rinput_digital\x18\x01 \x01(\x0b\x32\x12.omip.InputDigitalH\x00\x12)\n\x0cinput_analog\x18\x02 \x01(\x0b\x32\x11.omip.InputAnalogH\x00\x12+\n\rinput_encoder\x18\x03 \x01(\x0b\x32\x12.omip.InputEncoderH\x00\x12-\n\x0e\x66\x65\x65\x64\x62\x61\x63k_image\x18\x04 \x01(\x0b\x32\x13.omip.FeedbackImageH\x00\x12)\n\x0c\x66\x65\x65\x64\x62\x61\x63k_led\x18\x05 \x01(\x0b\x32\x11.omip.FeedbackLedH\x00\x12+\n\rsystem_config\x18\x06 \x01(\x0b\x32\x12.omip.SystemConfigH\x00\x12;\n\x12\x63\x61pability_request\x18\x07 \x01(\x0b\x32\x1d.omip.DeviceCapabilityRequestH\x00\x12=\n\x13\x63\x61pability_response\x18\x08 \x01(\x0b\x32\x1e.omip.DeviceCapabilityResponseH\x00\x42\x0e\n\x0cmessage_type\"A\n\x0cInputDigital\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x0f\n\x07port_id\x18\x02 \x01(\r\x12\r\n\x05state\x18\x03 \x01(\x08\"@\n\x0bInputAnalog\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x0f\n\x07port_id\x18\x02 \x01(\r\x12\r\n\x05value\x18\x03 \x01(\x02\"A\n\x0cInputEncoder\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x0f\n\x07port_id\x18\x02 \x01(\r\x12\r\n\x05steps\x18\x03 \x01(\x11\"\xec\x01\n\rFeedbackImage\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x11\n\tscreen_id\x18\x02 \x01(\r\x12/\n\x06\x66ormat\x18\x03 \x01(\x0e\x32\x1f.omip.FeedbackImage.ImageFormat\x12\x12\n\ntotal_size\x18\x04 \x01(\r\x12\x14\n\x0c\x63hunk_offset\x18\x05 \x01(\r\x12\x1a\n\nchunk_data\x18\x06 \x01(\x0c\x42\x06\x92?\x03\x08\xc8\x01\x12\x15\n\ris_last_chunk\x18\x07 \x01(\x08\"\'\n\x0bImageFormat\x12\x0e\n\nRGB565_RLE\x10\x00\x12\x08\n\x04JPEG\x10\x01\"C\n\x0b\x46\x65\x65\x64\x62\x61\x63kLed\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12\x0e\n\x06led_id\x18\x02 \x01(\r\x12\x11\n\tcolor_rgb\x18\x03 \x01(\r\"\x0e\n\x0cSystemConfig\"\x19\n\x17\x44\x65viceCapabilityRequest\"\xbe\x02\n\x18\x44\x65viceCapabilityResponse\x12\x11\n\tdevice_id\x18\x01 \x01(\r\x12=\n\x05ports\x18\x02 \x03(\x0b\x32..omip.DeviceCapabilityResponse.PortDescription\x1a\xcf\x01\n\x0fPortDescription\x12\x45\n\x04type\x18\x01 \x01(\x0e\x32\x37.omip.DeviceCapabilityResponse.PortDescription.PortType\x12\x0f\n\x07port_id\x18\x02 \x01(\r\"d\n\x08PortType\x12\x11\n\rDIGITAL_INPUT\x10\x00\x12\x10\n\x0c\x41NALOG_INPUT\x10\x01\x12\x11\n\rENCODER_INPUT\x10\x02\x12\x10\n\x0cIMAGE_OUTPUT\x10\x03\x12\x0e\n\nLED_OUTPUT\x10\x04\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'omip_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_WRAPPERMESSAGE']._serialized_start=21
-  _globals['_WRAPPERMESSAGE']._serialized_end=445
-  _globals['_INPUTDIGITAL']._serialized_start=447
-  _globals['_INPUTDIGITAL']._serialized_end=512
-  _globals['_INPUTANALOG']._serialized_start=514
-  _globals['_INPUTANALOG']._serialized_end=578
-  _globals['_INPUTENCODER']._serialized_start=580
-  _globals['_INPUTENCODER']._serialized_end=645
-  _globals['_FEEDBACKIMAGE']._serialized_start=648
-  _globals['_FEEDBACKIMAGE']._serialized_end=811
-  _globals['_FEEDBACKIMAGE_IMAGEFORMAT']._serialized_start=772
-  _globals['_FEEDBACKIMAGE_IMAGEFORMAT']._serialized_end=811
-  _globals['_FEEDBACKLED']._serialized_start=813
-  _globals['_FEEDBACKLED']._serialized_end=880
-  _globals['_SYSTEMCONFIG']._serialized_start=882
-  _globals['_SYSTEMCONFIG']._serialized_end=896
-  _globals['_DEVICECAPABILITYREQUEST']._serialized_start=898
-  _globals['_DEVICECAPABILITYREQUEST']._serialized_end=923
-  _globals['_DEVICECAPABILITYRESPONSE']._serialized_start=926
-  _globals['_DEVICECAPABILITYRESPONSE']._serialized_end=1244
-  _globals['_DEVICECAPABILITYRESPONSE_PORTDESCRIPTION']._serialized_start=1037
-  _globals['_DEVICECAPABILITYRESPONSE_PORTDESCRIPTION']._serialized_end=1244
-  _globals['_DEVICECAPABILITYRESPONSE_PORTDESCRIPTION_PORTTYPE']._serialized_start=1144
-  _globals['_DEVICECAPABILITYRESPONSE_PORTDESCRIPTION_PORTTYPE']._serialized_end=1244
+  _globals['_FEEDBACKIMAGE'].fields_by_name['chunk_data']._loaded_options = None
+  _globals['_FEEDBACKIMAGE'].fields_by_name['chunk_data']._serialized_options = b'\222?\003\010\310\001'
+  _globals['_WRAPPERMESSAGE']._serialized_start=35
+  _globals['_WRAPPERMESSAGE']._serialized_end=459
+  _globals['_INPUTDIGITAL']._serialized_start=461
+  _globals['_INPUTDIGITAL']._serialized_end=526
+  _globals['_INPUTANALOG']._serialized_start=528
+  _globals['_INPUTANALOG']._serialized_end=592
+  _globals['_INPUTENCODER']._serialized_start=594
+  _globals['_INPUTENCODER']._serialized_end=659
+  _globals['_FEEDBACKIMAGE']._serialized_start=662
+  _globals['_FEEDBACKIMAGE']._serialized_end=898
+  _globals['_FEEDBACKIMAGE_IMAGEFORMAT']._serialized_start=859
+  _globals['_FEEDBACKIMAGE_IMAGEFORMAT']._serialized_end=898
+  _globals['_FEEDBACKLED']._serialized_start=900
+  _globals['_FEEDBACKLED']._serialized_end=967
+  _globals['_SYSTEMCONFIG']._serialized_start=969
+  _globals['_SYSTEMCONFIG']._serialized_end=983
+  _globals['_DEVICECAPABILITYREQUEST']._serialized_start=985
+  _globals['_DEVICECAPABILITYREQUEST']._serialized_end=1010
+  _globals['_DEVICECAPABILITYRESPONSE']._serialized_start=1013
+  _globals['_DEVICECAPABILITYRESPONSE']._serialized_end=1331
+  _globals['_DEVICECAPABILITYRESPONSE_PORTDESCRIPTION']._serialized_start=1124
+  _globals['_DEVICECAPABILITYRESPONSE_PORTDESCRIPTION']._serialized_end=1331
+  _globals['_DEVICECAPABILITYRESPONSE_PORTDESCRIPTION_PORTTYPE']._serialized_start=1231
+  _globals['_DEVICECAPABILITYRESPONSE_PORTDESCRIPTION_PORTTYPE']._serialized_end=1331
 # @@protoc_insertion_point(module_scope)

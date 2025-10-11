@@ -1,2 +1,4 @@
 pyserial
 protobuf
+nanopb
+Pillow

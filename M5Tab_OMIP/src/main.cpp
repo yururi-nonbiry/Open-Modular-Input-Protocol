@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include "omip.pb.h"
 #include "pb_decode.h"
 #include "pb_encode.h"
@@ -35,12 +36,26 @@ constexpr float SIDEBAR_WIDTH_RATIO = 0.0f;
 int32_t g_headerHeight = MIN_HEADER_HEIGHT;
 float g_current_volume = 0.5f;
 #define DEVICE_ID 1
+#define SCREEN_ID_FULL 0
+#define SCREEN_ID_PRIMARY_PORT 100
+#define SCREEN_ID_CELL_BASE 1000
 #define PORT_ANALOG_VOLUME 18
 #define PORT_SWIPE_LEFT 19
 #define PORT_SWIPE_RIGHT 20
 constexpr uint16_t COLOR_HEADER_BG = 0x39E7;   // subtle blueish grey
 constexpr uint16_t COLOR_GRID_LINE = 0x739C;   // light grey
 constexpr uint16_t COLOR_SIDEBAR_BG = 0x18C3;  // muted grey
+
+// --- Image Reconstruction State ---
+struct ImageReconstruction {
+    uint8_t* buffer = nullptr;
+    size_t total_size = 0;
+    size_t received_size = 0;
+    uint32_t screen_id = 0;
+    omip_FeedbackImage_ImageFormat format = omip_FeedbackImage_ImageFormat_JPEG;
+};
+ImageReconstruction g_image_recon;
+
 
 struct LayoutInfo {
     int32_t screen_width = 0;
@@ -74,7 +89,10 @@ struct SwipeState {
 
 SwipeState g_swipe_state;
 
+bool g_draw_test_rect = false; // Test flag for continuous drawing
+
 namespace {
+constexpr int32_t kCellMargin = 4;
 constexpr size_t kMaxCapabilityPorts = 22; // 18 grid + 1 analog + 2 swipe + 1 screen
 
 struct CapabilityPortsPayload {
@@ -97,6 +115,13 @@ static bool encode_capability_ports(pb_ostream_t* stream, const pb_field_t* fiel
 }
 
 // --- Function Prototypes ---
+struct ScreenRegion {
+    int32_t x = 0;
+    int32_t y = 0;
+    int32_t w = 0;
+    int32_t h = 0;
+};
+
 void handle_feedback_data(const uint8_t* buffer, size_t len);
 void draw_ui();
 void draw_header();
@@ -174,6 +199,7 @@ void send_analog_input(uint32_t port_id, float value) {
 
 // --- Data Handling & UI ---
 void send_capability_response() {
+    static_assert(kCellMargin >= 0, "cell margin must be non-negative");
     omip_WrapperMessage wrapper = omip_WrapperMessage_init_zero;
     wrapper.which_message_type = omip_WrapperMessage_capability_response_tag;
     omip_DeviceCapabilityResponse *cap_response = &wrapper.message_type.capability_response;
@@ -212,6 +238,147 @@ void send_capability_response() {
     send_omip_message(wrapper);
 }
 
+bool resolve_image_region(uint32_t screen_id, ScreenRegion& region) {
+    uint32_t cell_index = std::numeric_limits<uint32_t>::max();
+    if (screen_id >= SCREEN_ID_CELL_BASE) {
+        cell_index = screen_id - SCREEN_ID_CELL_BASE;
+    } else if (screen_id != SCREEN_ID_FULL && screen_id != SCREEN_ID_PRIMARY_PORT && screen_id < GRID_ROWS * GRID_COLS) {
+        cell_index = screen_id;
+    }
+
+    if (cell_index < GRID_ROWS * GRID_COLS) {
+        int32_t row = static_cast<int32_t>(cell_index / GRID_COLS);
+        int32_t col = static_cast<int32_t>(cell_index % GRID_COLS);
+        int32_t cell_x = g_layout.grid_origin_x + col * g_layout.cell_width;
+        int32_t cell_y = g_layout.grid_origin_y + row * g_layout.cell_height;
+        int32_t cell_w = g_layout.cell_width;
+        int32_t cell_h = g_layout.cell_height;
+
+        if (cell_w <= 0 || cell_h <= 0) {
+            return false;
+        }
+
+        int32_t offset_x = kCellMargin / 2;
+        int32_t offset_y = kCellMargin / 2;
+        int32_t usable_w = cell_w - kCellMargin;
+        int32_t usable_h = cell_h - kCellMargin;
+
+        if (usable_w <= 0) {
+            offset_x = 0;
+            usable_w = cell_w;
+        }
+        if (usable_h <= 0) {
+            offset_y = 0;
+            usable_h = cell_h;
+        }
+
+        region.x = cell_x + offset_x;
+        region.y = cell_y + offset_y;
+        region.w = usable_w;
+        region.h = usable_h;
+        return true;
+    }
+
+    // Treat special screen id as full screen drawing area.
+    if (screen_id == SCREEN_ID_FULL || screen_id == SCREEN_ID_PRIMARY_PORT) {
+        region.x = 0;
+        region.y = 0;
+        region.w = g_layout.screen_width;
+        region.h = g_layout.screen_height;
+        return true;
+    }
+
+    // Fallback: draw across the full display for unexpected screen IDs.
+    region.x = 0;
+    region.y = 0;
+    region.w = g_layout.screen_width;
+    region.h = g_layout.screen_height;
+    return false;
+}
+
+void draw_jpeg_in_region(const uint8_t* data, size_t len, const ScreenRegion& region, bool clip_to_region) {
+    if (data == nullptr || len == 0 || region.w <= 0 || region.h <= 0) {
+        return;
+    }
+
+    if (clip_to_region) {
+        M5.Display.startWrite();
+        M5.Display.setClipRect(region.x, region.y, region.w, region.h);
+    }
+
+    M5.Display.drawJpg(data, len, region.x, region.y, region.w, region.h);
+
+    if (clip_to_region) {
+        M5.Display.clearClipRect();
+        M5.Display.endWrite();
+    }
+}
+
+void handle_feedback_image(const omip_FeedbackImage& img) {
+    Serial.println("handle_feedback_image: Entered function.");
+
+    // First chunk of a new image
+    if (img.chunk_offset == 0) {
+        Serial.printf("handle_feedback_image: First chunk. Total size: %u\n", img.total_size);
+        if (g_image_recon.buffer != nullptr) {
+            Serial.println("handle_feedback_image: Freeing existing buffer.");
+            free(g_image_recon.buffer);
+            g_image_recon.buffer = nullptr;
+        }
+        
+        Serial.println("handle_feedback_image: Allocating new buffer from PSRAM...");
+        g_image_recon.buffer = (uint8_t*)ps_malloc(img.total_size);
+        
+        if (g_image_recon.buffer == nullptr) {
+            Serial.println("handle_feedback_image: FATAL - ps_malloc failed!");
+            return;
+        }
+        Serial.printf("handle_feedback_image: Buffer allocated at %p\n", g_image_recon.buffer);
+
+        g_image_recon.total_size = img.total_size;
+        g_image_recon.received_size = 0;
+        g_image_recon.screen_id = img.screen_id;
+        g_image_recon.format = img.format;
+    }
+
+    // Check for consistency
+    if (img.total_size != g_image_recon.total_size || g_image_recon.buffer == nullptr) {
+        Serial.println("handle_feedback_image: ERROR - Inconsistent state, ignoring chunk.");
+        return;
+    }
+
+    // Copy chunk data
+    if (img.chunk_data.size > 0) {
+        Serial.printf("handle_feedback_image: Receiving chunk. Offset: %u, Size: %u\n", img.chunk_offset, img.chunk_data.size);
+        if (img.chunk_offset + img.chunk_data.size > g_image_recon.total_size) {
+            Serial.println("handle_feedback_image: ERROR - Chunk would overflow buffer!");
+            return;
+        }
+        memcpy(g_image_recon.buffer + img.chunk_offset, img.chunk_data.bytes, img.chunk_data.size);
+        g_image_recon.received_size += img.chunk_data.size;
+    }
+
+    // Last chunk received, draw the image
+    if (img.is_last_chunk) {
+        Serial.println("handle_feedback_image: Last chunk received.");
+        if (g_image_recon.received_size == g_image_recon.total_size) {
+            Serial.printf("handle_feedback_image: All bytes received (%u). Drawing image...\n", g_image_recon.received_size);
+            if (g_image_recon.format == omip_FeedbackImage_ImageFormat_JPEG) {
+                Serial.println("handle_feedback_image: Setting flag to draw test rectangle.");
+                g_draw_test_rect = true;
+            }
+        } else {
+            Serial.printf("handle_feedback_image: ERROR - Size mismatch! Expected %u, got %u\n", g_image_recon.total_size, g_image_recon.received_size);
+        }
+        
+        Serial.println("handle_feedback_image: Cleaning up buffer.");
+        free(g_image_recon.buffer);
+        g_image_recon.buffer = nullptr;
+        g_image_recon.total_size = 0;
+        g_image_recon.received_size = 0;
+    }
+}
+
 void handle_incoming_message(omip_WrapperMessage& msg) {
     switch (msg.which_message_type) {
         case omip_WrapperMessage_capability_request_tag: {
@@ -219,7 +386,7 @@ void handle_incoming_message(omip_WrapperMessage& msg) {
             break;
         }
         case omip_WrapperMessage_feedback_image_tag: {
-            // ... (Icon caching and drawing logic is omitted for this step)
+            handle_feedback_image(msg.message_type.feedback_image);
             break;
         }
         default: {
@@ -436,9 +603,14 @@ void setup() {
 }
 
 void loop() {
+  Serial.print("."); // Heartbeat to check if the loop is running
   M5.update();
   handle_touch();
   handle_gesture();
+
+  if (g_draw_test_rect) {
+    M5.Display.fillRect(0, 0, 96, 96, RED);
+  }
 
   // Handle incoming serial data
   if (Serial.available() > 0) {
