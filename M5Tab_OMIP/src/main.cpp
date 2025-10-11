@@ -353,31 +353,13 @@ void handle_touch() {
             send_analog_input(PORT_ANALOG_VOLUME, g_current_volume);
             draw_sidebar(g_current_volume);
         }
-    }
-
-    if (pressed_now) {
-        if (g_touch_context.grid_active) {
-            int32_t port = point_to_grid_port(x, y);
-            if (port != g_touch_context.active_port) {
-                if (g_touch_context.active_port >= 0) {
-                    send_digital_input(g_touch_context.active_port, false);
-                }
-                if (port >= 0) {
-                    g_touch_context.active_port = port;
-                    send_digital_input(port, true);
-                } else {
-                    g_touch_context.active_port = -1;
-                    g_touch_context.grid_active = false;
-                }
-            }
-        } else if (g_touch_context.sidebar_active) {
-            float new_volume = compute_volume_from_y(y);
-            if (std::fabs(new_volume - g_touch_context.last_volume_sent) > 0.01f) {
-                g_touch_context.last_volume_sent = new_volume;
-                g_current_volume = new_volume;
-                send_analog_input(PORT_ANALOG_VOLUME, g_current_volume);
-                draw_sidebar(g_current_volume);
-            }
+    } else if (g_touch_context.sidebar_active && pressed_now) {
+        float new_volume = compute_volume_from_y(y);
+        if (std::fabs(new_volume - g_touch_context.last_volume_sent) > 0.01f) {
+            g_touch_context.last_volume_sent = new_volume;
+            g_current_volume = new_volume;
+            send_analog_input(PORT_ANALOG_VOLUME, g_current_volume);
+            draw_sidebar(g_current_volume);
         }
     }
 
