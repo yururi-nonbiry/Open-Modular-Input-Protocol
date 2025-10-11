@@ -1,4 +1,4 @@
-#include <M5Unified.h>
+'''#include <M5Unified.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -35,6 +35,8 @@ constexpr int32_t MIN_HEADER_HEIGHT = 40;
 constexpr float SIDEBAR_WIDTH_RATIO = 0.0f;
 int32_t g_headerHeight = MIN_HEADER_HEIGHT;
 float g_current_volume = 0.5f;
+uint8_t g_brightness = 128; // Brightness level (0-255)
+
 #define DEVICE_ID 1
 #define SCREEN_ID_FULL 0
 #define SCREEN_ID_PRIMARY_PORT 100
@@ -75,6 +77,9 @@ void send_image_ack(bool success) {
     Serial.flush();
 }
 
+struct ButtonRegion {
+    int32_t x, y, w, h;
+};
 
 struct LayoutInfo {
     int32_t screen_width = 0;
@@ -87,6 +92,8 @@ struct LayoutInfo {
     int32_t grid_height = 0;
     int32_t cell_width = 0;
     int32_t cell_height = 0;
+    ButtonRegion brightness_up_btn;
+    ButtonRegion brightness_down_btn;
 };
 
 LayoutInfo g_layout;
@@ -432,6 +439,10 @@ static bool point_in_sidebar(int32_t x, int32_t y) {
     return (x >= g_layout.sidebar_x) && (y >= g_layout.grid_origin_y) && (y < g_layout.grid_origin_y + g_layout.grid_height);
 }
 
+static bool point_in_button(int32_t x, int32_t y, const ButtonRegion& btn) {
+    return (x >= btn.x && x < (btn.x + btn.w) && y >= btn.y && y < (btn.y + btn.h));
+}
+
 static float compute_volume_from_y(int32_t y) {
     if (g_layout.grid_height <= 0) {
         return g_current_volume;
@@ -447,6 +458,14 @@ void draw_header() {
     M5.Display.setTextSize(2);
     M5.Display.setCursor(12, g_headerHeight / 2 - 8);
     M5.Display.print("M5Tab OMIP");
+
+    // Draw brightness buttons
+    M5.Display.setTextSize(3);
+    M5.Display.drawRect(g_layout.brightness_down_btn.x, g_layout.brightness_down_btn.y, g_layout.brightness_down_btn.w, g_layout.brightness_down_btn.h, WHITE);
+    M5.Display.drawString("-", g_layout.brightness_down_btn.x + g_layout.brightness_down_btn.w / 2, g_layout.brightness_down_btn.y + g_layout.brightness_down_btn.h / 2);
+    M5.Display.drawRect(g_layout.brightness_up_btn.x, g_layout.brightness_up_btn.y, g_layout.brightness_up_btn.w, g_layout.brightness_up_btn.h, WHITE);
+    M5.Display.drawString("+", g_layout.brightness_up_btn.x + g_layout.brightness_up_btn.w / 2, g_layout.brightness_up_btn.y + g_layout.brightness_up_btn.h / 2);
+    M5.Display.setTextDatum(top_left);
 }
 
 void draw_sidebar(float volume) {
@@ -477,6 +496,12 @@ void draw_ui() {
     g_layout.cell_width = GRID_COLS > 0 ? g_layout.grid_width / GRID_COLS : 0;
     g_layout.cell_height = GRID_ROWS > 0 ? g_layout.grid_height / GRID_ROWS : 0;
 
+    // Calculate header button positions
+    int32_t btn_size = g_headerHeight * 0.7;
+    int32_t btn_margin = (g_headerHeight - btn_size) / 2;
+    g_layout.brightness_up_btn = {g_layout.screen_width - btn_size - btn_margin, btn_margin, btn_size, btn_size};
+    g_layout.brightness_down_btn = {g_layout.brightness_up_btn.x - btn_size - btn_margin, btn_margin, btn_size, btn_size};
+
     M5.Display.fillScreen(BLACK);
     draw_header();
 
@@ -503,17 +528,31 @@ void handle_touch() {
     }
 
     const auto& detail = M5.Touch.getDetail();
-    bool pressed_now = detail.isPressed();
     bool pressed_begin = detail.wasPressed();
+    bool pressed_now = detail.isPressed();
     bool released_now = detail.wasReleased();
 
-    if (!(pressed_now || pressed_begin || released_now)) {
+    if (!pressed_begin && !pressed_now && !released_now) {
         return;
     }
 
     int32_t x = detail.x;
     int32_t y = detail.y;
 
+    // Handle header buttons on press
+    if (pressed_begin) {
+        if (point_in_button(x, y, g_layout.brightness_up_btn)) {
+            g_brightness = std::min(255, g_brightness + 32);
+            M5.Display.setBrightness(g_brightness);
+            return; // Header button handled
+        } else if (point_in_button(x, y, g_layout.brightness_down_btn)) {
+            g_brightness = std::max(0, g_brightness - 32);
+            M5.Display.setBrightness(g_brightness);
+            return; // Header button handled
+        }
+    }
+
+    // --- Normal UI touch handling (Grid and Sidebar) ---
     if (pressed_begin) {
         g_touch_context.grid_active = false;
         g_touch_context.sidebar_active = false;
@@ -608,6 +647,7 @@ void setup() {
   auto cfg = M5.config();
   M5.begin(cfg);
   M5.Display.setRotation(3);
+  M5.Display.setBrightness(g_brightness);
   draw_ui();
   Serial.begin(115200);
   setup_ble();
@@ -650,3 +690,4 @@ void loop() {
     }
   }
 }
+'''
