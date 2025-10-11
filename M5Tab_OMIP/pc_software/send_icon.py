@@ -11,6 +11,9 @@ import omip_pb2
 
 # Constants
 CHUNK_SIZE = 190  # Nanopb max_size is 200, leave some buffer
+ACK_READY = b"\x06"
+ACK_ERROR = b"\x15"
+ACK_TIMEOUT_SEC = 2.0
 
 def send_data(ser, data):
     """Wraps data in the simple serial protocol (~ + length + data) and sends it."""
@@ -20,6 +23,28 @@ def send_data(ser, data):
     ser.write(b'~')
     ser.write(bytes([len(data)]))
     ser.write(data)
+
+def wait_for_ack(ser, timeout=ACK_TIMEOUT_SEC):
+    """Wait for the device to signal that it is ready for the next chunk."""
+    deadline = time.monotonic() + timeout
+    noise = bytearray()
+    while time.monotonic() < deadline:
+        byte = ser.read(1)
+        if not byte:
+            continue
+        if byte == ACK_READY:
+            if noise:
+                print(noise.decode('utf-8', errors='ignore'), end='', flush=True)
+                noise.clear()
+            return
+        if byte == ACK_ERROR:
+            if noise:
+                print(noise.decode('utf-8', errors='ignore'), end='', flush=True)
+            raise RuntimeError("Device reported an error while receiving an image chunk.")
+        noise.extend(byte)
+    if noise:
+        print(noise.decode('utf-8', errors='ignore'), end='', flush=True)
+    raise TimeoutError("Timed out waiting for ACK from device.")
 
 def main(args):
     """Main function to load, process, and send the image."""
@@ -77,7 +102,15 @@ def main(args):
                 send_data(ser, serialized_msg)
 
                 offset += chunk_len
-                time.sleep(0.02) # Small delay between chunks
+
+                try:
+                    wait_for_ack(ser)
+                except TimeoutError as e:
+                    print(f"\nError: {e}")
+                    return
+                except RuntimeError as e:
+                    print(f"\nError: {e}")
+                    return
 
             print("Image sent successfully.")
 

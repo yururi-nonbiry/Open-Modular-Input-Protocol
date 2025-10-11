@@ -56,6 +56,25 @@ struct ImageReconstruction {
 };
 ImageReconstruction g_image_recon;
 
+constexpr uint8_t kAckReady = 0x06;  // ASCII ACK
+constexpr uint8_t kAckError = 0x15;  // ASCII NAK
+
+void reset_image_reconstruction() {
+    if (g_image_recon.buffer != nullptr) {
+        free(g_image_recon.buffer);
+        g_image_recon.buffer = nullptr;
+    }
+    g_image_recon.total_size = 0;
+    g_image_recon.received_size = 0;
+    g_image_recon.screen_id = 0;
+    g_image_recon.format = omip_FeedbackImage_ImageFormat_JPEG;
+}
+
+void send_image_ack(bool success) {
+    Serial.write(success ? kAckReady : kAckError);
+    Serial.flush();
+}
+
 
 struct LayoutInfo {
     int32_t screen_width = 0;
@@ -88,8 +107,6 @@ struct SwipeState {
 };
 
 SwipeState g_swipe_state;
-
-bool g_draw_test_rect = false; // Test flag for continuous drawing
 
 namespace {
 constexpr int32_t kCellMargin = 4;
@@ -315,68 +332,62 @@ void draw_jpeg_in_region(const uint8_t* data, size_t len, const ScreenRegion& re
 }
 
 void handle_feedback_image(const omip_FeedbackImage& img) {
-    Serial.println("handle_feedback_image: Entered function.");
+    bool success = true;
 
-    // First chunk of a new image
-    if (img.chunk_offset == 0) {
-        Serial.printf("handle_feedback_image: First chunk. Total size: %u\n", img.total_size);
-        if (g_image_recon.buffer != nullptr) {
-            Serial.println("handle_feedback_image: Freeing existing buffer.");
-            free(g_image_recon.buffer);
-            g_image_recon.buffer = nullptr;
-        }
-        
-        Serial.println("handle_feedback_image: Allocating new buffer from PSRAM...");
-        g_image_recon.buffer = (uint8_t*)ps_malloc(img.total_size);
-        
-        if (g_image_recon.buffer == nullptr) {
-            Serial.println("handle_feedback_image: FATAL - ps_malloc failed!");
-            return;
-        }
-        Serial.printf("handle_feedback_image: Buffer allocated at %p\n", g_image_recon.buffer);
-
-        g_image_recon.total_size = img.total_size;
-        g_image_recon.received_size = 0;
-        g_image_recon.screen_id = img.screen_id;
-        g_image_recon.format = img.format;
-    }
-
-    // Check for consistency
-    if (img.total_size != g_image_recon.total_size || g_image_recon.buffer == nullptr) {
-        Serial.println("handle_feedback_image: ERROR - Inconsistent state, ignoring chunk.");
-        return;
-    }
-
-    // Copy chunk data
-    if (img.chunk_data.size > 0) {
-        Serial.printf("handle_feedback_image: Receiving chunk. Offset: %u, Size: %u\n", img.chunk_offset, img.chunk_data.size);
-        if (img.chunk_offset + img.chunk_data.size > g_image_recon.total_size) {
-            Serial.println("handle_feedback_image: ERROR - Chunk would overflow buffer!");
-            return;
-        }
-        memcpy(g_image_recon.buffer + img.chunk_offset, img.chunk_data.bytes, img.chunk_data.size);
-        g_image_recon.received_size += img.chunk_data.size;
-    }
-
-    // Last chunk received, draw the image
-    if (img.is_last_chunk) {
-        Serial.println("handle_feedback_image: Last chunk received.");
-        if (g_image_recon.received_size == g_image_recon.total_size) {
-            Serial.printf("handle_feedback_image: All bytes received (%u). Drawing image...\n", g_image_recon.received_size);
-            if (g_image_recon.format == omip_FeedbackImage_ImageFormat_JPEG) {
-                Serial.println("handle_feedback_image: Setting flag to draw test rectangle.");
-                g_draw_test_rect = true;
+    do {
+        if (img.chunk_offset == 0) {
+            reset_image_reconstruction();
+            if (img.total_size == 0) {
+                success = false;
+                break;
             }
-        } else {
-            Serial.printf("handle_feedback_image: ERROR - Size mismatch! Expected %u, got %u\n", g_image_recon.total_size, g_image_recon.received_size);
+            g_image_recon.buffer = static_cast<uint8_t*>(ps_malloc(img.total_size));
+            if (g_image_recon.buffer == nullptr) {
+                success = false;
+                break;
+            }
+            g_image_recon.total_size = img.total_size;
+            g_image_recon.screen_id = img.screen_id;
+            g_image_recon.format = img.format;
+            g_image_recon.received_size = 0;
         }
-        
-        Serial.println("handle_feedback_image: Cleaning up buffer.");
-        free(g_image_recon.buffer);
-        g_image_recon.buffer = nullptr;
-        g_image_recon.total_size = 0;
-        g_image_recon.received_size = 0;
+
+        if (g_image_recon.buffer == nullptr || img.total_size != g_image_recon.total_size) {
+            success = false;
+            break;
+        }
+
+        if (img.chunk_offset + img.chunk_data.size > g_image_recon.total_size) {
+            success = false;
+            break;
+        }
+
+        if (img.chunk_data.size > 0) {
+            memcpy(g_image_recon.buffer + img.chunk_offset, img.chunk_data.bytes, img.chunk_data.size);
+            size_t chunk_end = img.chunk_offset + img.chunk_data.size;
+            if (chunk_end > g_image_recon.received_size) {
+                g_image_recon.received_size = chunk_end;
+            }
+        }
+
+        if (img.is_last_chunk) {
+            bool bytes_complete = (g_image_recon.received_size == g_image_recon.total_size);
+            if (bytes_complete && g_image_recon.format == omip_FeedbackImage_ImageFormat_JPEG) {
+                ScreenRegion region;
+                bool clip = resolve_image_region(g_image_recon.screen_id, region);
+                draw_jpeg_in_region(g_image_recon.buffer, g_image_recon.total_size, region, clip);
+            } else if (!bytes_complete) {
+                success = false;
+            }
+            reset_image_reconstruction();
+        }
+    } while (false);
+
+    if (!success) {
+        reset_image_reconstruction();
     }
+
+    send_image_ack(success);
 }
 
 void handle_incoming_message(omip_WrapperMessage& msg) {
@@ -603,14 +614,9 @@ void setup() {
 }
 
 void loop() {
-  Serial.print("."); // Heartbeat to check if the loop is running
   M5.update();
   handle_touch();
   handle_gesture();
-
-  if (g_draw_test_rect) {
-    M5.Display.fillRect(0, 0, 96, 96, RED);
-  }
 
   // Handle incoming serial data
   if (Serial.available() > 0) {
