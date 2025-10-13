@@ -47,7 +47,6 @@ uint8_t g_beepVolume = 128;   // Beep volume level (0-255)
 #define PORT_SWIPE_LEFT 19
 #define PORT_SWIPE_RIGHT 20
 constexpr uint16_t COLOR_HEADER_BG = 0x39E7;   // subtle blueish grey
-constexpr uint16_t COLOR_GRID_LINE = 0x739C;   // light grey
 constexpr uint16_t COLOR_SIDEBAR_BG = 0x18C3;  // muted grey
 
 // --- Image Reconstruction State ---
@@ -122,6 +121,8 @@ SwipeState g_swipe_state;
 namespace {
 constexpr int32_t kCellMargin = 4;
 constexpr float kGridCellScale = 0.80f;
+constexpr int32_t kGridBorderThickness = 2;
+constexpr int32_t kGridBorderCornerRadius = 12;
 constexpr size_t kMaxCapabilityPorts = 22; // 18 grid + 1 analog + 2 swipe + 1 screen
 
 struct CapabilityPortsPayload {
@@ -149,6 +150,7 @@ struct ScreenRegion {
     int32_t y = 0;
     int32_t w = 0;
     int32_t h = 0;
+    bool is_grid_cell = false;
 };
 
 void handle_feedback_data(const uint8_t* buffer, size_t len);
@@ -268,6 +270,7 @@ void send_capability_response() {
 }
 
 bool resolve_image_region(uint32_t screen_id, ScreenRegion& region) {
+    region.is_grid_cell = false;
     uint32_t cell_index = std::numeric_limits<uint32_t>::max();
 
     // Prioritize grid cell range (0-17) for IDs sent from PC
@@ -314,6 +317,7 @@ bool resolve_image_region(uint32_t screen_id, ScreenRegion& region) {
         region.y = cell_y + offset_y;
         region.w = usable_w;
         region.h = usable_h;
+        region.is_grid_cell = true;
         return true;
     }
 
@@ -323,6 +327,7 @@ bool resolve_image_region(uint32_t screen_id, ScreenRegion& region) {
         region.y = 0;
         region.w = g_layout.screen_width;
         region.h = g_layout.screen_height;
+        region.is_grid_cell = false;
         return true;
     }
 
@@ -331,7 +336,55 @@ bool resolve_image_region(uint32_t screen_id, ScreenRegion& region) {
     region.y = 0;
     region.w = g_layout.screen_width;
     region.h = g_layout.screen_height;
+    region.is_grid_cell = false;
     return false;
+}
+
+static ScreenRegion compute_inner_grid_region(const ScreenRegion& region) {
+    ScreenRegion inner = region;
+    inner.is_grid_cell = false;
+    if (!region.is_grid_cell) {
+        return inner;
+    }
+
+    int32_t inset = kGridBorderThickness + 1;
+    if (inner.w <= inset * 2 || inner.h <= inset * 2) {
+        inner.w = 0;
+        inner.h = 0;
+        return inner;
+    }
+
+    inner.x += inset;
+    inner.y += inset;
+    inner.w -= inset * 2;
+    inner.h -= inset * 2;
+    return inner;
+}
+
+static void draw_grid_cell_border(const ScreenRegion& region) {
+    if (!region.is_grid_cell || region.w <= 0 || region.h <= 0) {
+        return;
+    }
+
+    int32_t base_radius = std::min<int32_t>(kGridBorderCornerRadius, std::min(region.w, region.h) / 2);
+    for (int32_t i = 0; i < kGridBorderThickness; ++i) {
+        int32_t w = region.w - i * 2;
+        int32_t h = region.h - i * 2;
+        if (w <= 0 || h <= 0) {
+            break;
+        }
+        int32_t radius = std::max<int32_t>(base_radius - i, 0);
+        M5.Display.drawRoundRect(region.x + i, region.y + i, w, h, radius, WHITE);
+    }
+}
+
+static void draw_all_cell_borders() {
+    for (int32_t index = 0; index < GRID_ROWS * GRID_COLS; ++index) {
+        ScreenRegion region;
+        if (resolve_image_region(static_cast<uint32_t>(index), region)) {
+            draw_grid_cell_border(region);
+        }
+    }
 }
 
 void draw_jpeg_in_region(const uint8_t* data, size_t len, const ScreenRegion& region, bool clip_to_region) {
@@ -339,14 +392,26 @@ void draw_jpeg_in_region(const uint8_t* data, size_t len, const ScreenRegion& re
         return;
     }
 
-    if (clip_to_region) {
-        M5.Display.startWrite();
-        M5.Display.setClipRect(region.x, region.y, region.w, region.h);
+    ScreenRegion content_region = compute_inner_grid_region(region);
+
+    if (region.is_grid_cell) {
+        draw_grid_cell_border(region);
     }
 
-    M5.Display.drawJpg(data, len, region.x, region.y, region.w, region.h);
+    const ScreenRegion& target_region = region.is_grid_cell ? content_region : region;
+    if (target_region.w <= 0 || target_region.h <= 0) {
+        return;
+    }
 
-    if (clip_to_region) {
+    bool apply_clip = clip_to_region && target_region.w > 0 && target_region.h > 0;
+    if (apply_clip) {
+        M5.Display.startWrite();
+        M5.Display.setClipRect(target_region.x, target_region.y, target_region.w, target_region.h);
+    }
+
+    M5.Display.drawJpg(data, len, target_region.x, target_region.y, target_region.w, target_region.h);
+
+    if (apply_clip) {
         M5.Display.clearClipRect();
         M5.Display.endWrite();
     }
@@ -363,21 +428,12 @@ void handle_feedback_image(const omip_FeedbackImage& img) {
                 bool has_region = resolve_image_region(img.screen_id, region);
                 if (has_region) {
                     M5.Display.fillRect(region.x, region.y, region.w, region.h, BLACK);
+                    draw_grid_cell_border(region);
                 } else {
                     M5.Display.fillScreen(BLACK);
                     draw_header();
-                    for (int32_t r = 0; r <= GRID_ROWS; ++r) {
-                        int32_t y = g_layout.grid_origin_y + r * g_layout.cell_height;
-                        M5.Display.drawFastHLine(g_layout.grid_origin_x, y, g_layout.grid_width, COLOR_GRID_LINE);
-                    }
-                    for (int32_t c = 0; c <= GRID_COLS; ++c) {
-                        int32_t x = g_layout.grid_origin_x + c * g_layout.cell_width;
-                        M5.Display.drawFastVLine(x, g_layout.grid_origin_y, g_layout.grid_height, COLOR_GRID_LINE);
-                    }
-                    if (g_layout.sidebar_width > 0) {
-                        M5.Display.drawFastVLine(g_layout.sidebar_x, g_layout.grid_origin_y, g_layout.grid_height, COLOR_GRID_LINE);
-                        draw_sidebar(g_current_volume);
-                    }
+                    draw_sidebar(g_current_volume);
+                    draw_all_cell_borders();
                 }
                 break;
             }
@@ -559,22 +615,8 @@ void draw_ui() {
 
     M5.Display.fillScreen(BLACK);
     draw_header();
-
-    for (int32_t r = 0; r <= GRID_ROWS; ++r) {
-        int32_t y = g_layout.grid_origin_y + r * g_layout.cell_height;
-        M5.Display.drawFastHLine(g_layout.grid_origin_x, y, g_layout.grid_width, COLOR_GRID_LINE);
-    }
-
-    for (int32_t c = 0; c <= GRID_COLS; ++c) {
-        int32_t x = g_layout.grid_origin_x + c * g_layout.cell_width;
-        M5.Display.drawFastVLine(x, g_layout.grid_origin_y, g_layout.grid_height, COLOR_GRID_LINE);
-    }
-
-    if (g_layout.sidebar_width > 0) {
-        M5.Display.drawFastVLine(g_layout.sidebar_x, g_layout.grid_origin_y, g_layout.grid_height, COLOR_GRID_LINE);
-    }
-
     draw_sidebar(g_current_volume);
+    draw_all_cell_borders();
 }
 
 void handle_touch() {
