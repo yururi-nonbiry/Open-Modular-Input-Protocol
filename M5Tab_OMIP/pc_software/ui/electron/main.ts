@@ -34,6 +34,7 @@ function createWindow() {
 
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
+    win.webContents.openDevTools(); // Open DevTools automatically
   } else {
     win.loadFile(path.join(process.env.DIST, 'index.html'));
   }

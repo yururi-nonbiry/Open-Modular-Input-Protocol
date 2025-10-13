@@ -2,7 +2,7 @@ import { AppBar, Box, Button, CssBaseline, Dialog, DialogActions, DialogContent,
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Define types for our configuration
 interface CellConfig {
@@ -28,8 +28,22 @@ function App() {
   const [pageConfigs, setPageConfigs] = useState<PageConfigs>({});
   const [editingCell, setEditingCell] = useState<{page: number, index: number} | null>(null);
   const [editingAction, setEditingAction] = useState<string>('');
+  const hasIpc = typeof window !== 'undefined' && Boolean(window.ipcRenderer);
+  const warnedMessages = useRef<Set<string>>(new Set());
+
+  const warnOnce = (message: string) => {
+    if (!warnedMessages.current.has(message)) {
+      warnedMessages.current.add(message);
+      console.warn(message);
+    }
+  };
 
   const fetchPorts = () => {
+    if (!hasIpc) {
+      warnOnce('ipcRenderer not available; skipping port fetch.');
+      setPorts([]);
+      return;
+    }
     window.ipcRenderer.invoke('serial:get_ports').then((availablePorts: string[]) => {
       setPorts(availablePorts);
       if (availablePorts.length > 0 && !availablePorts.includes(selectedPort)) {
@@ -41,6 +55,11 @@ function App() {
   };
 
   const fetchConfig = () => {
+    if (!hasIpc) {
+      warnOnce('ipcRenderer not available; using empty page config.');
+      setPageConfigs({});
+      return;
+    }
     window.ipcRenderer.invoke('config:get').then((config: PageConfigs) => {
       setPageConfigs(config);
     }).catch((err: Error) => {
@@ -52,6 +71,11 @@ function App() {
   useEffect(() => {
     fetchPorts();
     fetchConfig();
+
+    if (!hasIpc) {
+      warnOnce('ipcRenderer not available; skipping backend listener setup.');
+      return;
+    }
 
     // Listener for backend events
     const handleBackendEvent = (event: any, message: string) => {
@@ -78,9 +102,13 @@ function App() {
     return () => {
       window.ipcRenderer.off('from-backend', handleBackendEvent);
     };
-  }, []);
+  }, [hasIpc]);
 
   const handleConnect = async () => {
+    if (!hasIpc) {
+      warnOnce('ipcRenderer not available; cannot connect to device.');
+      return;
+    }
     if (!selectedPort) return;
     try {
       await window.ipcRenderer.invoke('serial:connect', selectedPort);
@@ -92,6 +120,10 @@ function App() {
   };
 
   const handleDisconnect = async () => {
+    if (!hasIpc) {
+      warnOnce('ipcRenderer not available; nothing to disconnect.');
+      return;
+    }
     try {
       await window.ipcRenderer.invoke('serial:disconnect');
       setIsConnected(false);
@@ -103,7 +135,9 @@ function App() {
   const handlePageChange = (newPage: number) => {
     const clampedPage = Math.max(1, Math.min(totalPages, newPage));
     setPage(clampedPage);
-    window.ipcRenderer.invoke('config:set_page', clampedPage);
+    if (hasIpc) {
+      window.ipcRenderer.invoke('config:set_page', clampedPage);
+    }
   };
 
   const handlePrevPage = () => handlePageChange(page - 1);
@@ -116,7 +150,9 @@ function App() {
     }
     newConfigs[page][index].icon = filePath;
     setPageConfigs(newConfigs);
-    window.ipcRenderer.invoke('config:save', newConfigs);
+    if (hasIpc) {
+      window.ipcRenderer.invoke('config:save', newConfigs);
+    }
   };
 
   const handleCellClick = (index: number) => {
@@ -132,7 +168,9 @@ function App() {
     }
     newConfigs[editingCell.page][editingCell.index].action = editingAction;
     setPageConfigs(newConfigs);
-    window.ipcRenderer.invoke('config:save', newConfigs);
+    if (hasIpc) {
+      window.ipcRenderer.invoke('config:save', newConfigs);
+    }
     setEditingCell(null);
   };
 
@@ -193,14 +231,14 @@ function App() {
 
         {/* Main Content */}
         <Box sx={{ flexGrow: 1, p: 2, overflowY: 'auto' }}>
-          <Grid container spacing={2}>
-            {currentGridConfig.map((cell, index) => (
-              <Grid item xs={2} key={index}>
-                <GridCell 
-                  config={cell}
-                  isFlashing={flashingCell === index}
-                  onClick={() => handleCellClick(index)}
-                  onIconDrop={(filePath) => handleIconDrop(index, filePath)}
+      <Grid container spacing={2}>
+        {currentGridConfig.map((cell, index) => (
+          <Grid key={index} size={2}>
+            <GridCell 
+              config={cell}
+              isFlashing={flashingCell === index}
+              onClick={() => handleCellClick(index)}
+              onIconDrop={(filePath) => handleIconDrop(index, filePath)}
                 />
               </Grid>
             ))}
