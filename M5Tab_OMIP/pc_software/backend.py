@@ -6,17 +6,28 @@ import serial
 import serial.tools.list_ports
 import io
 import os
+import base64
+import queue
+from typing import Optional
 from pynput import keyboard
+from PIL import Image
+import binascii
 
 import omip_pb2
 
 CONFIG_FILE = "gui_config.json"
+CHUNK_SIZE = 190
+ACK_READY = b"\x06"
+ACK_ERROR = b"\x15"
+ACK_TIMEOUT_SEC = 2.0
 
 class BackendService:
     def __init__(self):
         self.serial_connection = None
         self.stop_thread = False
         self.reader_thread = None
+        self.serial_lock = threading.Lock()
+        self.ack_queue: "queue.Queue[bytes]" = queue.Queue()
         self.keyboard = keyboard.Controller()
         self.page_configs = {str(p): [{'icon': None, 'action': ''} for _ in range(18)] for p in range(1, 6)}
         self.current_page = 1
@@ -69,32 +80,41 @@ class BackendService:
         while not self.stop_thread:
             try:
                 if self.serial_connection and self.serial_connection.is_open:
-                    if self.serial_connection.read(1) == b'~':
-                        length_byte = self.serial_connection.read(1)
-                        if not length_byte: continue
-                        length = length_byte[0]
-                        data = self.serial_connection.read(length)
-                        if len(data) == length:
-                            wrapper_msg = omip_pb2.WrapperMessage()
-                            wrapper_msg.ParseFromString(data)
-                            
-                            if wrapper_msg.HasField("input_digital"):
-                                port_id = wrapper_msg.input_digital.port_id
-                                state = wrapper_msg.input_digital.state
-                                self.send_response({
-                                    'type': 'device_event', 'event': 'input_digital',
-                                    'port_id': port_id, 'state': state
-                                })
-                                if state and 0 <= port_id < 18:
-                                    action = self.page_configs.get(str(self.current_page), [])[port_id].get('action')
-                                    self._execute_action(action)
+                    first_byte = self.serial_connection.read(1)
+                    if not first_byte:
+                        continue
+                    if first_byte in (ACK_READY, ACK_ERROR):
+                        self.ack_queue.put(first_byte)
+                        continue
+                    if first_byte != b'~':
+                        continue
 
-                            elif wrapper_msg.HasField("input_analog"):
-                                self.send_response({
-                                    'type': 'device_event', 'event': 'input_analog',
-                                    'port_id': wrapper_msg.input_analog.port_id,
-                                    'value': wrapper_msg.input_analog.value
-                                })
+                    length_byte = self.serial_connection.read(1)
+                    if not length_byte:
+                        continue
+                    length = length_byte[0]
+                    data = self.serial_connection.read(length)
+                    if len(data) == length:
+                        wrapper_msg = omip_pb2.WrapperMessage()
+                        wrapper_msg.ParseFromString(data)
+                        
+                        if wrapper_msg.HasField("input_digital"):
+                            port_id = wrapper_msg.input_digital.port_id
+                            state = wrapper_msg.input_digital.state
+                            self.send_response({
+                                'type': 'device_event', 'event': 'input_digital',
+                                'port_id': port_id, 'state': state
+                            })
+                            if state and 0 <= port_id < 18:
+                                action = self.page_configs.get(str(self.current_page), [])[port_id].get('action')
+                                self._execute_action(action)
+
+                        elif wrapper_msg.HasField("input_analog"):
+                            self.send_response({
+                                'type': 'device_event', 'event': 'input_analog',
+                                'port_id': wrapper_msg.input_analog.port_id,
+                                'value': wrapper_msg.input_analog.value
+                            })
                 else:
                     time.sleep(0.1)
             except (serial.SerialException, OSError) as e:
@@ -103,6 +123,101 @@ class BackendService:
                 break
             except Exception as e:
                 self.send_response({'type': 'error', 'message': f'Unexpected error: {e}'})
+
+    def _send_serial_data(self, data: bytes) -> None:
+        if not self.serial_connection or not self.serial_connection.is_open:
+            raise serial.SerialException("Device not connected.")
+        if len(data) > 255:
+            raise ValueError(f"Payload size {len(data)} exceeds maximum frame length.")
+        self.serial_connection.write(b'~')
+        self.serial_connection.write(bytes([len(data)]))
+        self.serial_connection.write(data)
+
+    def _clear_ack_queue(self) -> None:
+        while not self.ack_queue.empty():
+            try:
+                self.ack_queue.get_nowait()
+            except queue.Empty:
+                break
+
+    def _wait_for_ack(self) -> None:
+        if not self.serial_connection or not self.serial_connection.is_open:
+            raise serial.SerialException("Device not connected.")
+        deadline = time.monotonic() + ACK_TIMEOUT_SEC
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("Timed out waiting for ACK from device.")
+            try:
+                byte = self.ack_queue.get(timeout=min(remaining, 0.1))
+            except queue.Empty:
+                continue
+            if byte == ACK_READY:
+                return
+            if byte == ACK_ERROR:
+                raise RuntimeError("Device reported an error while receiving image data.")
+
+    def _image_to_jpeg_bytes(self, image: Image.Image) -> bytes:
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        jpeg_buffer = io.BytesIO()
+        image.save(jpeg_buffer, format='JPEG', quality=85)
+        return jpeg_buffer.getvalue()
+
+    def send_image_to_device(self, screen_id: int, *, file_path: Optional[str] = None, data_url: Optional[str] = None) -> None:
+        if screen_id is None:
+            raise ValueError("screen_id is required.")
+        if not self.serial_connection or not self.serial_connection.is_open:
+            raise serial.SerialException("Device not connected.")
+
+        image_data: bytes
+        try:
+            if file_path:
+                if not os.path.exists(file_path):
+                    raise FileNotFoundError(f"Image file not found: {file_path}")
+                with Image.open(file_path) as img:
+                    image_data = self._image_to_jpeg_bytes(img)
+            elif data_url:
+                if ',' in data_url:
+                    _, encoded = data_url.split(',', 1)
+                else:
+                    encoded = data_url
+                image_bytes = base64.b64decode(encoded)
+                with Image.open(io.BytesIO(image_bytes)) as img:
+                    image_data = self._image_to_jpeg_bytes(img)
+            else:
+                raise ValueError("No image data provided.")
+        except FileNotFoundError:
+            raise
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("Invalid image data.") from exc
+        except Exception as exc:
+            raise RuntimeError(f"Failed to load image: {exc}") from exc
+
+        total_size = len(image_data)
+        self._clear_ack_queue()
+
+        offset = 0
+        while offset < total_size:
+            chunk = image_data[offset:offset + CHUNK_SIZE]
+            is_last = (offset + len(chunk)) == total_size
+
+            feedback_msg = omip_pb2.FeedbackImage(
+                screen_id=screen_id,
+                format=omip_pb2.FeedbackImage.ImageFormat.JPEG,
+                total_size=total_size,
+                chunk_offset=offset,
+                chunk_data=chunk,
+                is_last_chunk=is_last
+            )
+            wrapper_msg = omip_pb2.WrapperMessage(feedback_image=feedback_msg)
+            serialized_msg = wrapper_msg.SerializeToString()
+
+            with self.serial_lock:
+                self._send_serial_data(serialized_msg)
+                self._wait_for_ack()
+
+            offset += len(chunk)
 
     def run_command(self, command):
         cmd_type = command.get('type')
@@ -147,6 +262,19 @@ class BackendService:
             self.page_configs = command.get('config', self.page_configs)
             self.save_config()
             self.send_response({'command': 'save_config', 'status': 'success'})
+
+        elif cmd_type == 'send_image':
+            screen_id = command.get('screen_id')
+            file_path = command.get('file_path')
+            data_url = command.get('data_url')
+            if screen_id is None:
+                self.send_response({'command': 'send_image', 'status': 'error', 'message': 'screen_id is required'})
+                return
+            try:
+                self.send_image_to_device(int(screen_id), file_path=file_path, data_url=data_url)
+                self.send_response({'command': 'send_image', 'status': 'success', 'screen_id': int(screen_id)})
+            except Exception as e:
+                self.send_response({'command': 'send_image', 'status': 'error', 'message': str(e)})
 
         else:
             self.send_response({'command': cmd_type, 'status': 'error', 'message': f'Unknown command: {cmd_type}'})

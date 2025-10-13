@@ -7,11 +7,21 @@ interface CellConfig {
     action: string;
 }
 
+export interface DroppedIconPayload {
+    dataUrl: string;
+    filePath?: string | null;
+}
+
+const isLikelyAbsolutePath = (value: string) => {
+    if (!value) return false;
+    return /^[a-zA-Z]:[\\/]/.test(value) || value.startsWith('\\\\') || value.startsWith('/');
+};
+
 interface GridCellProps {
     config: CellConfig;
     isFlashing: boolean;
     onClick: () => void;
-    onIconDrop: (filePath: string) => void;
+    onIconDrop: (payload: DroppedIconPayload) => void;
 }
 
 export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellProps) {
@@ -28,11 +38,16 @@ export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellPr
         }
 
         const reader = new FileReader();
+        const fileWithPath = file as File & { path?: string };
+        const droppedFilePath = typeof fileWithPath.path === 'string' ? fileWithPath.path : undefined;
         reader.onload = () => {
             const result = typeof reader.result === 'string' ? reader.result : null;
             if (result) {
                 setImageUrl(result);
-                onIconDrop(result);
+                onIconDrop({
+                    dataUrl: result,
+                    filePath: droppedFilePath ?? null,
+                });
             }
         };
         reader.onerror = (error) => {
@@ -64,6 +79,11 @@ export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellPr
             return;
         }
 
+        if (!isLikelyAbsolutePath(config.icon)) {
+            setImageUrl(null);
+            return;
+        }
+
         const hasIpc = typeof window !== 'undefined' && Boolean(window.ipcRenderer);
         if (!hasIpc) {
             console.warn("ipcRenderer unavailable; cannot load icon from filesystem path.");
@@ -72,12 +92,9 @@ export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellPr
         }
 
         window.ipcRenderer!.invoke('image:get_base64', config.icon)
-            .then(dataUrl => {
-                if (dataUrl) {
-                    setImageUrl(dataUrl);
-                } else {
-                    setImageUrl(null);
-                }
+            .then((value) => {
+                const dataUrl = typeof value === 'string' ? value : null;
+                setImageUrl(dataUrl);
             })
             .catch(err => {
                 console.error("Failed to load image:", err);

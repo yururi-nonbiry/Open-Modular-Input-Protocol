@@ -1,4 +1,4 @@
-import { AppBar, Box, Button, CssBaseline, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormHelperText, Grid, IconButton, InputLabel, MenuItem, Select, Slider, Stack, TextField, Toolbar, Typography } from '@mui/material';
+import { AppBar, Box, Button, CssBaseline, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormHelperText, Grid, IconButton, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -15,6 +15,28 @@ interface PageConfigs {
 }
 
 import { GridCell } from './components/GridCell';
+import type { DroppedIconPayload } from './components/GridCell';
+
+const isLikelyAbsolutePath = (value: string) => {
+  if (!value) return false;
+  return /^[a-zA-Z]:[\\/]/.test(value) || value.startsWith('\\\\') || value.startsWith('/');
+};
+
+const sanitizePageConfigs = (config: PageConfigs): PageConfigs => {
+  const sanitized: PageConfigs = {};
+  for (const [pageKey, cells] of Object.entries(config ?? {})) {
+    sanitized[pageKey] = Array.from({ length: 18 }, (_, index) => {
+      const cell = cells?.[index];
+      const icon = typeof cell?.icon === 'string' ? cell.icon : null;
+      const safeIcon = icon && (icon.startsWith('data:') || isLikelyAbsolutePath(icon)) ? icon : null;
+      return {
+        icon: safeIcon,
+        action: typeof cell?.action === 'string' ? cell.action : '',
+      };
+    });
+  }
+  return sanitized;
+};
 
 function App() {
   // React state for UI
@@ -46,7 +68,10 @@ function App() {
       setPorts([]);
       return;
     }
-    window.ipcRenderer!.invoke('serial:get_ports').then((availablePorts: string[]) => {
+    window.ipcRenderer!.invoke('serial:get_ports').then((value) => {
+      const availablePorts = Array.isArray(value)
+        ? value.filter((port): port is string => typeof port === 'string')
+        : [];
       setPorts(availablePorts);
       if (availablePorts.length > 0 && !availablePorts.includes(selectedPort)) {
         setSelectedPort(availablePorts[0]);
@@ -62,8 +87,12 @@ function App() {
       setPageConfigs({});
       return;
     }
-    window.ipcRenderer!.invoke('config:get').then((config: PageConfigs) => {
-      setPageConfigs(config);
+    window.ipcRenderer!.invoke('config:get').then((value) => {
+      if (value && typeof value === 'object') {
+        setPageConfigs(sanitizePageConfigs(value as PageConfigs));
+      } else {
+        setPageConfigs({});
+      }
     }).catch((err: Error) => {
       console.error('Failed to get config:', err);
     });
@@ -90,9 +119,12 @@ function App() {
     }
 
     // Listener for backend events
-    const handleBackendEvent = (_event: any, message: string) => {
+    const handleBackendEvent = (_event: unknown, raw: unknown) => {
+      if (typeof raw !== 'string') {
+        return;
+      }
       try {
-        const response = JSON.parse(message);
+        const response = JSON.parse(raw);
         if (response.type === 'device_event') {
           if (response.event === 'input_digital' && response.state === true) {
             const portId = response.port_id;
@@ -155,15 +187,38 @@ function App() {
   const handlePrevPage = () => handlePageChange(page - 1);
   const handleNextPage = () => handlePageChange(page + 1);
 
-  const handleIconDrop = (index: number, filePath: string) => {
+  const handleIconDrop = (index: number, payload: DroppedIconPayload) => {
+    const { dataUrl, filePath } = payload;
+    const absolutePath = filePath && isLikelyAbsolutePath(filePath) ? filePath : null;
+    const iconValue = absolutePath ?? dataUrl ?? null;
+    if (!iconValue) {
+      console.warn('No icon data available for drop operation.');
+      return;
+    }
     const newConfigs = JSON.parse(JSON.stringify(pageConfigs)); // Deep copy
     if (!newConfigs[page]) {
       newConfigs[page] = Array(18).fill({ icon: null, action: '' });
     }
-    newConfigs[page][index].icon = filePath;
+    newConfigs[page][index].icon = iconValue;
     setPageConfigs(newConfigs);
     if (hasIpc) {
       window.ipcRenderer!.invoke('config:save', newConfigs);
+      if (isConnected) {
+        const uploadPayload: Record<string, unknown> = {
+          screenId: index,
+          page,
+        };
+        if (absolutePath) {
+          uploadPayload.filePath = absolutePath;
+        } else if (dataUrl) {
+          uploadPayload.dataUrl = dataUrl;
+        }
+        window.ipcRenderer!
+          .invoke('image:upload', uploadPayload)
+          .catch((err: Error) => {
+            console.error('Failed to upload image to device:', err);
+          });
+      }
     }
   };
 
@@ -247,11 +302,11 @@ function App() {
       <Grid container spacing={2}>
         {currentGridConfig.map((cell, index) => (
           <Grid key={index} size={2}>
-            <GridCell 
+              <GridCell 
               config={cell}
               isFlashing={flashingCell === index}
               onClick={() => handleCellClick(index)}
-              onIconDrop={(filePath) => handleIconDrop(index, filePath)}
+              onIconDrop={(icon) => handleIconDrop(index, icon)}
                 />
               </Grid>
             ))}

@@ -215,4 +215,27 @@ app.whenReady().then(() => {
       return null;
     }
   });
+  ipcMain.handle("image:upload", async (_event, payload) => {
+    const { screenId, page, filePath, dataUrl } = payload ?? {};
+    if (typeof screenId !== "number" || Number.isNaN(screenId)) {
+      throw new Error("screenId is required for image upload.");
+    }
+    const command = {
+      type: "send_image",
+      screen_id: screenId
+    };
+    if (typeof page === "number" && !Number.isNaN(page)) {
+      command.page = page;
+    }
+    if (filePath && path.isAbsolute(filePath)) {
+      command.file_path = filePath;
+    }
+    if (!command.file_path && typeof dataUrl === "string" && dataUrl.length > 0) {
+      command.data_url = dataUrl;
+    }
+    if (!command.file_path && !command.data_url) {
+      throw new Error("No image data provided for upload.");
+    }
+    await requestBackend(command, "send_image");
+  });
 });
