@@ -1,5 +1,5 @@
 import { Box, Paper, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
 interface CellConfig {
@@ -17,35 +17,72 @@ interface GridCellProps {
 export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellProps) {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
 
+    const handleFileDrop = useCallback((file: File) => {
+        if (!file) {
+            return;
+        }
+
+        // Read the file as a Data URL so we always have an immediate preview.
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = typeof reader.result === 'string' ? reader.result : null;
+            if (result) {
+                setImageUrl(result);
+                onIconDrop(result);
+            }
+        };
+        reader.onerror = (error) => {
+            console.error("Failed to read dropped image:", error);
+            setImageUrl(null);
+        };
+        reader.readAsDataURL(file);
+    }, [onIconDrop]);
+
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         accept: { 'image/*': ['.png', '.gif', '.jpeg', '.jpg'] },
         noClick: true, // We use our own onClick for the edit dialog
+        useFsAccessApi: false,
         onDrop: (acceptedFiles) => {
             if (acceptedFiles.length > 0) {
-                // In Electron, the File object has a 'path' property
-                const filePath = (acceptedFiles[0] as any).path;
-                if (filePath) {
-                    onIconDrop(filePath);
-                }
+                handleFileDrop(acceptedFiles[0]);
             }
         }
     });
 
     useEffect(() => {
-        if (config.icon) {
-            window.ipcRenderer.invoke('image:get_base64', config.icon)
-                .then(dataUrl => {
-                    if (dataUrl) {
-                        setImageUrl(dataUrl);
-                    }
-                })
-                .catch(err => {
-                    console.error("Failed to load image:", err);
-                    setImageUrl(null);
-                });
-        } else {
+        if (!config.icon) {
             setImageUrl(null);
+            return;
         }
+
+        if (config.icon.startsWith('data:')) {
+            setImageUrl(config.icon);
+            return;
+        }
+
+        const hasIpc = typeof window !== 'undefined' && Boolean(window.ipcRenderer);
+        if (!hasIpc) {
+            console.warn("ipcRenderer unavailable; cannot load icon from filesystem path.");
+            setImageUrl(null);
+            return;
+        }
+
+        window.ipcRenderer!.invoke('image:get_base64', config.icon)
+            .then(dataUrl => {
+                if (dataUrl) {
+                    setImageUrl(dataUrl);
+                } else {
+                    setImageUrl(null);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to load image:", err);
+                setImageUrl(null);
+            });
     }, [config.icon]);
 
     return (

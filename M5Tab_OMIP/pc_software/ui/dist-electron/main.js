@@ -197,11 +197,18 @@ app.whenReady().then(() => {
       throw error;
     }
   });
-  ipcMain.handle("image:get_base64", async (event, filePath) => {
+  ipcMain.handle("image:get_base64", async (_event, filePath) => {
     try {
+      if (!filePath) {
+        return null;
+      }
+      if (filePath.startsWith("data:")) {
+        return filePath;
+      }
       const data = await fs.readFile(filePath);
       const ext = path.extname(filePath).toLowerCase().substring(1);
-      const mimeType = `image/${ext}`;
+      const mappedExt = ext === "jpg" ? "jpeg" : ext;
+      const mimeType = mappedExt ? `image/${mappedExt}` : "image/png";
       return `data:${mimeType};base64,${data.toString("base64")}`;
     } catch (err) {
       console.error(`Failed to read image file: ${filePath}`, err);

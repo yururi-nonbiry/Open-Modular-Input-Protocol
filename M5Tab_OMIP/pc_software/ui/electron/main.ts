@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -259,11 +259,20 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle('image:get_base64', async (event, filePath: string) => {
+  ipcMain.handle('image:get_base64', async (_event: IpcMainInvokeEvent, filePath: string) => {
     try {
+      if (!filePath) {
+        return null;
+      }
+
+      if (filePath.startsWith('data:')) {
+        return filePath;
+      }
+
       const data = await fs.readFile(filePath);
       const ext = path.extname(filePath).toLowerCase().substring(1);
-      const mimeType = `image/${ext}`;
+      const mappedExt = ext === 'jpg' ? 'jpeg' : ext;
+      const mimeType = mappedExt ? `image/${mappedExt}` : 'image/png';
       return `data:${mimeType};base64,${data.toString('base64')}`;
     } catch (err) {
       console.error(`Failed to read image file: ${filePath}`, err);
