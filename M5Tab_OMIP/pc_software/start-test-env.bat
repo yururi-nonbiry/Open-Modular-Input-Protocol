@@ -54,9 +54,9 @@ rem Launch Vite dev server
 echo [INFO] Launching Vite dev server on port %DEV_SERVER_PORT% in a new window...
 start "OMIP UI (Vite)" cmd /k "cd /d ""%UI_DIR%"" && npm run dev -- --port %DEV_SERVER_PORT% --strictPort"
 
-rem Launch Electron shell
-echo [INFO] Launching Electron shell in a new window...
-start "OMIP Electron" cmd /k "cd /d ""%UI_DIR%"" && set VITE_DEV_SERVER_URL=%VITE_DEV_SERVER_URL% && npx electron ."
+rem Launch Electron shell (handled by vite-plugin-electron)
+rem echo [INFO] Launching Electron shell in a new window...
+rem start "OMIP Electron" cmd /k "cd /d ""%UI_DIR%"" && set VITE_DEV_SERVER_URL=%VITE_DEV_SERVER_URL% && npx electron ."
 
 rem Launch Python backend if the virtual environment is available
 if exist "%VENV_DIR%\Scripts\activate.bat" (
