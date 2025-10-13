@@ -265,10 +265,12 @@ void send_capability_response() {
 
 bool resolve_image_region(uint32_t screen_id, ScreenRegion& region) {
     uint32_t cell_index = std::numeric_limits<uint32_t>::max();
-    if (screen_id >= SCREEN_ID_CELL_BASE) {
-        cell_index = screen_id - SCREEN_ID_CELL_BASE;
-    } else if (screen_id != SCREEN_ID_FULL && screen_id != SCREEN_ID_PRIMARY_PORT && screen_id < GRID_ROWS * GRID_COLS) {
+
+    // Prioritize grid cell range (0-17) for IDs sent from PC
+    if (screen_id < GRID_ROWS * GRID_COLS) {
         cell_index = screen_id;
+    } else if (screen_id >= SCREEN_ID_CELL_BASE) {
+        cell_index = screen_id - SCREEN_ID_CELL_BASE;
     }
 
     if (cell_index < GRID_ROWS * GRID_COLS) {
