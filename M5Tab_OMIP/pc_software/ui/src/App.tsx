@@ -22,13 +22,13 @@ function App() {
   const [selectedPort, setSelectedPort] = useState<string>('');
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(5);
+  const [totalPages] = useState<number>(5);
   const [volume, setVolume] = useState<number>(75);
   const [flashingCell, setFlashingCell] = useState<number | null>(null);
   const [pageConfigs, setPageConfigs] = useState<PageConfigs>({});
   const [editingCell, setEditingCell] = useState<{page: number, index: number} | null>(null);
   const [editingAction, setEditingAction] = useState<string>('');
-  const hasIpc = typeof window !== 'undefined' && Boolean(window.ipcRenderer);
+  const [hasIpc, setHasIpc] = useState<boolean>(() => typeof window !== 'undefined' && Boolean(window.ipcRenderer));
   const warnedMessages = useRef<Set<string>>(new Set());
   const portStatusMessage = hasIpc
     ? (ports.length === 0 ? 'No serial ports detected. Connect your device and press refresh.' : 'Select the serial port you want to use.')
@@ -47,7 +47,7 @@ function App() {
       setPorts([]);
       return;
     }
-    window.ipcRenderer.invoke('serial:get_ports').then((availablePorts: string[]) => {
+    window.ipcRenderer!.invoke('serial:get_ports').then((availablePorts: string[]) => {
       setPorts(availablePorts);
       if (availablePorts.length > 0 && !availablePorts.includes(selectedPort)) {
         setSelectedPort(availablePorts[0]);
@@ -63,7 +63,7 @@ function App() {
       setPageConfigs({});
       return;
     }
-    window.ipcRenderer.invoke('config:get').then((config: PageConfigs) => {
+    window.ipcRenderer!.invoke('config:get').then((config: PageConfigs) => {
       setPageConfigs(config);
     }).catch((err: Error) => {
       console.error('Failed to get config:', err);
@@ -75,13 +75,23 @@ function App() {
     fetchPorts();
     fetchConfig();
 
+    if (!hasIpc && typeof window !== 'undefined') {
+      const checkInterval = window.setInterval(() => {
+        if (window.ipcRenderer) {
+          setHasIpc(true);
+          window.clearInterval(checkInterval);
+        }
+      }, 200);
+      return () => window.clearInterval(checkInterval);
+    }
+
     if (!hasIpc) {
       warnOnce('ipcRenderer not available; skipping backend listener setup.');
       return;
     }
 
     // Listener for backend events
-    const handleBackendEvent = (event: any, message: string) => {
+    const handleBackendEvent = (_event: any, message: string) => {
       try {
         const response = JSON.parse(message);
         if (response.type === 'device_event') {
@@ -100,10 +110,10 @@ function App() {
       } catch (e) {}
     };
 
-    window.ipcRenderer.on('from-backend', handleBackendEvent);
+    window.ipcRenderer!.on('from-backend', handleBackendEvent);
 
     return () => {
-      window.ipcRenderer.off('from-backend', handleBackendEvent);
+      window.ipcRenderer!.off('from-backend', handleBackendEvent);
     };
   }, [hasIpc]);
 
@@ -114,7 +124,7 @@ function App() {
     }
     if (!selectedPort) return;
     try {
-      await window.ipcRenderer.invoke('serial:connect', selectedPort);
+      await window.ipcRenderer!.invoke('serial:connect', selectedPort);
       setIsConnected(true);
     } catch (err) {
       console.error('Failed to connect:', err);
@@ -128,7 +138,7 @@ function App() {
       return;
     }
     try {
-      await window.ipcRenderer.invoke('serial:disconnect');
+      await window.ipcRenderer!.invoke('serial:disconnect');
       setIsConnected(false);
     } catch (err) {
       console.error('Failed to disconnect:', err);
@@ -139,7 +149,7 @@ function App() {
     const clampedPage = Math.max(1, Math.min(totalPages, newPage));
     setPage(clampedPage);
     if (hasIpc) {
-      window.ipcRenderer.invoke('config:set_page', clampedPage);
+      window.ipcRenderer!.invoke('config:set_page', clampedPage);
     }
   };
 
@@ -154,7 +164,7 @@ function App() {
     newConfigs[page][index].icon = filePath;
     setPageConfigs(newConfigs);
     if (hasIpc) {
-      window.ipcRenderer.invoke('config:save', newConfigs);
+      window.ipcRenderer!.invoke('config:save', newConfigs);
     }
   };
 
@@ -172,7 +182,7 @@ function App() {
     newConfigs[editingCell.page][editingCell.index].action = editingAction;
     setPageConfigs(newConfigs);
     if (hasIpc) {
-      window.ipcRenderer.invoke('config:save', newConfigs);
+      window.ipcRenderer!.invoke('config:save', newConfigs);
     }
     setEditingCell(null);
   };
@@ -239,8 +249,8 @@ function App() {
             aria-labelledby="volume-slider-label"
             orientation="vertical"
             value={volume}
-            onChange={(e, newValue) => setVolume(newValue as number)}
-            sx={{ flexGrow: 1, mt: 2, mb: 2}} 
+            onChange={(_event, newValue) => setVolume(newValue as number)}
+            sx={{ flexGrow: 1, mt: 2, mb: 2}}
           />
         </Box>
 

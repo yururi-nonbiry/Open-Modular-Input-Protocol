@@ -9,6 +9,8 @@ set "BASE_DIR=%~dp0"
 if "%BASE_DIR:~-1%"=="\" set "BASE_DIR=%BASE_DIR:~0,-1%"
 set "UI_DIR=%BASE_DIR%\ui"
 set "VENV_DIR=%BASE_DIR%\venv"
+set "DEV_SERVER_PORT=5173"
+set "VITE_DEV_SERVER_URL=http://localhost:%DEV_SERVER_PORT%"
 
 echo ==============================================
 echo   OMIP Test Environment Launcher (Windows)
@@ -49,12 +51,12 @@ if not exist "%UI_DIR%\node_modules" (
 )
 
 rem Launch Vite dev server
-echo [INFO] Launching Vite dev server in a new window...
-start "OMIP UI (Vite)" cmd /k "cd /d ""%UI_DIR%"" && npm run dev"
+echo [INFO] Launching Vite dev server on port %DEV_SERVER_PORT% in a new window...
+start "OMIP UI (Vite)" cmd /k "cd /d ""%UI_DIR%"" && npm run dev -- --port %DEV_SERVER_PORT% --strictPort"
 
 rem Launch Electron shell
 echo [INFO] Launching Electron shell in a new window...
-start "OMIP Electron" cmd /k "cd /d ""%UI_DIR%"" && npx electron ."
+start "OMIP Electron" cmd /k "cd /d ""%UI_DIR%"" && set VITE_DEV_SERVER_URL=%VITE_DEV_SERVER_URL% && npx electron ."
 
 rem Launch Python backend if the virtual environment is available
 if exist "%VENV_DIR%\Scripts\activate.bat" (

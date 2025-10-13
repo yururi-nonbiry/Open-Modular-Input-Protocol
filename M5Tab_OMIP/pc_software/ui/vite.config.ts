@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import electron from 'vite-plugin-electron';
 import renderer from 'vite-plugin-electron-renderer';
-import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,6 +14,18 @@ export default defineConfig({
       },
       {
         entry: 'electron/preload.ts',
+        vite: {
+          build: {
+            lib: {
+              formats: ['cjs'],
+              fileName: () => 'preload.js',
+            },
+            rollupOptions: {
+              external: ['electron'],
+            },
+            target: 'node18',
+          },
+        },
         onstart(options) {
           // Notify the Renderer-Process to reload the page when the Preload-Scripts build is complete, 
           // instead of restarting the entire Electron App.
@@ -24,4 +35,8 @@ export default defineConfig({
     ]),
     renderer(),
   ],
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
 });
