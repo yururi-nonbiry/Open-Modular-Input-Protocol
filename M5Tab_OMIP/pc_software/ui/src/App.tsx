@@ -1,4 +1,4 @@
-import { AppBar, Box, Button, CssBaseline, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton, InputLabel, MenuItem, Paper, Select, Slider, Stack, TextField, Toolbar, Typography } from '@mui/material';
+import { AppBar, Box, Button, CssBaseline, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormHelperText, Grid, IconButton, InputLabel, MenuItem, Select, Slider, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -30,6 +30,9 @@ function App() {
   const [editingAction, setEditingAction] = useState<string>('');
   const hasIpc = typeof window !== 'undefined' && Boolean(window.ipcRenderer);
   const warnedMessages = useRef<Set<string>>(new Set());
+  const portStatusMessage = hasIpc
+    ? (ports.length === 0 ? 'No serial ports detected. Connect your device and press refresh.' : 'Select the serial port you want to use.')
+    : 'Serial ports are only available when running inside the Electron shell.';
 
   const warnOnce = (message: string) => {
     if (!warnedMessages.current.has(message)) {
@@ -185,19 +188,31 @@ function App() {
         <Toolbar variant="dense">
           <Typography variant="h6" sx={{ flexGrow: 1, mr: 2 }}>OMIP Configurator</Typography>
           
-          <FormControl size="small" sx={{ m: 1, minWidth: 120 }} disabled={isConnected}>
+          <FormControl size="small" sx={{ m: 1, minWidth: 180 }} disabled={isConnected}>
             <InputLabel id="serial-port-label">Serial Port</InputLabel>
             <Select
               labelId="serial-port-label"
               id="serial-port-select"
               value={selectedPort}
               label="Serial Port"
+              displayEmpty
+              renderValue={(value) => {
+                if (!value) {
+                  return ports.length === 0 ? 'No ports available' : 'Select port';
+                }
+                return value;
+              }}
               onChange={(e) => setSelectedPort(e.target.value as string)}
             >
-              {ports.map((port) => (
-                <MenuItem key={port} value={port}>{port}</MenuItem>
-              ))}
+              {ports.length === 0 ? (
+                <MenuItem value="" disabled>No ports found</MenuItem>
+              ) : (
+                ports.map((port) => (
+                  <MenuItem key={port} value={port}>{port}</MenuItem>
+                ))
+              )}
             </Select>
+            <FormHelperText>{portStatusMessage}</FormHelperText>
           </FormControl>
 
           <Button variant="outlined" size="small" sx={{ mr: 1 }} disabled={isConnected} onClick={fetchPorts}>
