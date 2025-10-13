@@ -14,6 +14,8 @@ interface PageConfigs {
   [page: string]: CellConfig[];
 }
 
+import { GridCell } from './components/GridCell';
+
 function App() {
   // React state for UI
   const [ports, setPorts] = useState<string[]>([]);
@@ -107,6 +109,16 @@ function App() {
   const handlePrevPage = () => handlePageChange(page - 1);
   const handleNextPage = () => handlePageChange(page + 1);
 
+  const handleIconDrop = (index: number, filePath: string) => {
+    const newConfigs = JSON.parse(JSON.stringify(pageConfigs)); // Deep copy
+    if (!newConfigs[page]) {
+      newConfigs[page] = Array(18).fill({ icon: null, action: '' });
+    }
+    newConfigs[page][index].icon = filePath;
+    setPageConfigs(newConfigs);
+    window.ipcRenderer.invoke('config:save', newConfigs);
+  };
+
   const handleCellClick = (index: number) => {
     setEditingCell({ page, index });
     setEditingAction(pageConfigs[page]?.[index]?.action || '');
@@ -184,30 +196,12 @@ function App() {
           <Grid container spacing={2}>
             {currentGridConfig.map((cell, index) => (
               <Grid item xs={2} key={index}>
-                <Paper 
+                <GridCell 
+                  config={cell}
+                  isFlashing={flashingCell === index}
                   onClick={() => handleCellClick(index)}
-                  elevation={flashingCell === index ? 8 : 2}
-                  sx={{
-                    height: 120, 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-around',
-                    p: 1,
-                    cursor: 'pointer',
-                    backgroundColor: flashingCell === index ? 'primary.light' : 'background.paper',
-                    transition: 'background-color 0.1s ease-in-out',
-                    '&:hover': { backgroundColor: 'action.hover' }
-                  }}
-                >
-                  {/* TODO: Icon display */}
-                  <Box sx={{ flexGrow: 1, display:'flex', alignItems:'center'}}>
-                     <Typography variant="h5">?</Typography>
-                  </Box>
-                  <Typography variant="caption" noWrap sx={{ width: '100%', textAlign: 'center'}}>
-                    {cell.action || `Port ${index}`}
-                  </Typography>
-                </Paper>
+                  onIconDrop={(filePath) => handleIconDrop(index, filePath)}
+                />
               </Grid>
             ))}
           </Grid>

@@ -218,30 +218,57 @@ message DeviceCapabilityResponse {
 └── proto/              # Protobufスキーマ定義 (.protoファイル)
 ```
 
-### 9. PCソフトウェア開発環境とビルド手順
+### 9. PCソフトウェア (モダンUI版) の開発と実行
 
-#### 9.1 フロントエンド (Vite + Electron)
-- `pc_software/ui` フロントエンドのビルドには Node.js 18 以上が必須です。開発環境が WSL などで古い Node.js を参照している場合は、`npm run build` が `scripts/build.cjs` を介して Windows 側の `node.exe` (例: `C:\Program Files\nodejs\node.exe`) を自動選択します。
-- `scripts/build.cjs` は `tsc -b` → `vite build` → `electron-builder` の順に起動し、フロントエンドと Electron パッケージをまとめて生成します。個別にコマンドを実行する必要はありません。
-- Electron パッケージャーの設定では `win.signAndEditExecutable = false` としており、Windows でのシンボリックリンク作成やコードサイニングを強制しません。必要に応じて署名処理を行いたい場合は `package.json` の設定を調整してください。
+現在のPCソフトウェアは、モダンなUIを持つフロントエンド（Electron + Vite + React）と、Pythonで書かれたバックエンドが連携して動作します。
 
-#### 9.2 バックエンド (Python)
-このプロジェクトのPythonスクリプトは、`pc_software`ディレクトリ内の`venv`という名前の仮想環境で実行します。
-環境のセットアップと依存関係のインストールは、以下のコマンドで行ってください。
+#### 9.1 開発環境のセットアップ
 
-**Windows:**
+1. **Node.jsのインストール:**
+   Node.js (バージョン 18 以降) が必要です。インストールされていない場合は、公式サイトからダウンロードしてください。
+
+2. **Python仮想環境のセットアップ:**
+   バックエンドはPythonで動作します。`pc_software` ディレクトリで以下のコマンドを実行し、仮想環境と依存ライブラリをセットアップします。（この作業は初回のみで構いません）
+
+   **Windows:**
+   ```shell
+   python -m venv venv
+   .\venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+   **macOS / Linux:**
+   ```shell
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **UIの依存関係インストール:**
+   `pc_software/ui` ディレクトリに移動し、以下のコマンドを実行します。
+   ```shell
+   npm install
+   ```
+
+#### 9.2 開発モードでの実行
+
+セットアップ完了後、`pc_software/ui` ディレクトリで以下のコマンドを実行すると、開発用のアプリケーションが起動します。
+
 ```shell
-python -m venv pc_software\venv
-pc_software\venv\Scripts\activate
-pip install -r pc_software\requirements.txt
+npm run dev
 ```
 
-**macOS / Linux:**
+これにより、UIのホットリロード（コード変更の自動反映）が有効な状態でElectronアプリが立ち上がり、裏側で自動的にPythonバックエンドも起動します。
+
+#### 9.3 アプリケーションのビルド
+
+配布可能なアプリケーション（例: Windows向けの `.exe` ファイル）を作成するには、`pc_software/ui` ディレクトリで以下のコマンドを実行します。
+
 ```shell
-python3 -m venv pc_software/venv
-source pc_software/venv/bin/activate
-pip install -r pc_software/requirements.txt
+npm run build
 ```
+
+ビルドが完了すると、`pc_software/ui/release` ディレクトリ内に実行可能ファイルが生成されます。
 
 ### 10. 応用例 (Application Examples)
 

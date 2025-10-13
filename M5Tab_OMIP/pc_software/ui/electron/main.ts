@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 
@@ -178,6 +179,18 @@ app.whenReady().then(() => {
 
   ipcMain.handle('config:set_page', async (event, page: number) => {
     sendToPython({ type: 'set_page', page });
+  });
+
+  ipcMain.handle('image:get_base64', async (event, filePath: string) => {
+    try {
+      const data = await fs.readFile(filePath);
+      const ext = path.extname(filePath).toLowerCase().substring(1);
+      const mimeType = `image/${ext}`;
+      return `data:${mimeType};base64,${data.toString('base64')}`;
+    } catch (err) {
+      console.error(`Failed to read image file: ${filePath}`, err);
+      return null;
+    }
   });
 
 });
