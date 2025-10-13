@@ -2,7 +2,7 @@ import { AppBar, Box, Button, CssBaseline, Dialog, DialogActions, DialogContent,
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Define types for our configuration
 interface CellConfig {
@@ -62,6 +62,40 @@ function App() {
     }
   };
 
+  const createUploadPayload = useCallback((screenId: number, cell: CellConfig, targetPage: number): Record<string, unknown> | null => {
+    if (!cell?.icon) {
+      return null;
+    }
+    if (cell.icon.startsWith('data:')) {
+      return { screenId, page: targetPage, dataUrl: cell.icon };
+    }
+    if (isLikelyAbsolutePath(cell.icon)) {
+      return { screenId, page: targetPage, filePath: cell.icon };
+    }
+    return null;
+  }, []);
+
+  const syncPageIcons = useCallback(
+    async (targetPage: number, override?: CellConfig[]) => {
+      if (!hasIpc || !isConnected || !window.ipcRenderer) {
+        return;
+      }
+      const configs = override ?? pageConfigs[targetPage] ?? [];
+      for (let index = 0; index < configs.length; index += 1) {
+        const payload = createUploadPayload(index, configs[index], targetPage);
+        if (!payload) {
+          continue;
+        }
+        try {
+          await window.ipcRenderer.invoke('image:upload', payload);
+        } catch (err) {
+          console.error(`Failed to upload image for screen ${index} on page ${targetPage}:`, err);
+        }
+      }
+    },
+    [createUploadPayload, hasIpc, isConnected, pageConfigs]
+  );
+
   const fetchPorts = () => {
     if (!hasIpc) {
       warnOnce('ipcRenderer not available; skipping port fetch.');
@@ -89,7 +123,12 @@ function App() {
     }
     window.ipcRenderer!.invoke('config:get').then((value) => {
       if (value && typeof value === 'object') {
-        setPageConfigs(sanitizePageConfigs(value as PageConfigs));
+        const sanitized = sanitizePageConfigs(value as PageConfigs);
+        setPageConfigs(sanitized);
+        if (isConnected) {
+          const override = sanitized[String(page)] ?? sanitized[page];
+          void syncPageIcons(page, override);
+        }
       } else {
         setPageConfigs({});
       }
@@ -148,6 +187,13 @@ function App() {
     };
   }, [hasIpc]);
 
+  useEffect(() => {
+    if (!isConnected) {
+      return;
+    }
+    void syncPageIcons(page);
+  }, [isConnected, page, syncPageIcons]);
+
   const handleConnect = async () => {
     if (!hasIpc) {
       warnOnce('ipcRenderer not available; cannot connect to device.');
@@ -196,28 +242,28 @@ function App() {
       return;
     }
     const newConfigs = JSON.parse(JSON.stringify(pageConfigs)); // Deep copy
-    if (!newConfigs[page]) {
-      newConfigs[page] = Array(18).fill({ icon: null, action: '' });
+    if (!Array.isArray(newConfigs[page])) {
+      newConfigs[page] = Array.from({ length: 18 }, () => ({ icon: null, action: '' }));
+    }
+    if (!newConfigs[page][index]) {
+      newConfigs[page][index] = { icon: null, action: '' };
     }
     newConfigs[page][index].icon = iconValue;
-    setPageConfigs(newConfigs);
+
+    const sanitizedConfigs = sanitizePageConfigs(newConfigs);
+    setPageConfigs(sanitizedConfigs);
     if (hasIpc) {
-      window.ipcRenderer!.invoke('config:save', newConfigs);
+      window.ipcRenderer!.invoke('config:save', sanitizedConfigs);
       if (isConnected) {
-        const uploadPayload: Record<string, unknown> = {
-          screenId: index,
-          page,
-        };
-        if (absolutePath) {
-          uploadPayload.filePath = absolutePath;
-        } else if (dataUrl) {
-          uploadPayload.dataUrl = dataUrl;
+        const cell = sanitizedConfigs[page]?.[index];
+        const payload = cell ? createUploadPayload(index, cell, page) : null;
+        if (payload) {
+          window.ipcRenderer!
+            .invoke('image:upload', payload)
+            .catch((err: Error) => {
+              console.error('Failed to upload image to device:', err);
+            });
         }
-        window.ipcRenderer!
-          .invoke('image:upload', uploadPayload)
-          .catch((err: Error) => {
-            console.error('Failed to upload image to device:', err);
-          });
       }
     }
   };
@@ -231,17 +277,18 @@ function App() {
     if (!editingCell) return;
     const newConfigs = JSON.parse(JSON.stringify(pageConfigs)); // Deep copy
     if (!newConfigs[editingCell.page]) {
-      newConfigs[editingCell.page] = Array(18).fill({ icon: null, action: '' });
+      newConfigs[editingCell.page] = Array.from({ length: 18 }, () => ({ icon: null, action: '' }));
     }
     newConfigs[editingCell.page][editingCell.index].action = editingAction;
-    setPageConfigs(newConfigs);
+    const sanitizedConfigs = sanitizePageConfigs(newConfigs);
+    setPageConfigs(sanitizedConfigs);
     if (hasIpc) {
-      window.ipcRenderer!.invoke('config:save', newConfigs);
+      window.ipcRenderer!.invoke('config:save', sanitizedConfigs);
     }
     setEditingCell(null);
   };
 
-  const currentGridConfig = pageConfigs[page] || Array(18).fill({ icon: null, action: '' });
+  const currentGridConfig = pageConfigs[page] || Array.from({ length: 18 }, () => ({ icon: null, action: '' }));
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
