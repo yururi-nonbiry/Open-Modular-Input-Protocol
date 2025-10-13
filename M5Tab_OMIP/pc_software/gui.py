@@ -26,7 +26,7 @@ CONFIG_FILE = "gui_config.json"
 class App(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
-        self.title("M5Tab OMIP Configurator")
+        self.title("M5Tab OMIP 設定ツール")
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # --- Class variables ---
@@ -47,15 +47,15 @@ class App(TkinterDnD.Tk):
         connection_frame = ttk.Frame(self, padding="10")
         connection_frame.pack(fill="x", side="top")
 
-        ttk.Label(connection_frame, text="Serial Port:").pack(side="left", padx=(0, 5))
+        ttk.Label(connection_frame, text="シリアルポート:").pack(side="left", padx=(0, 5))
 
         self.port_variable = tk.StringVar()
         self.port_combobox = ttk.Combobox(connection_frame, textvariable=self.port_variable, width=15, state="readonly")
         self.port_combobox.pack(side="left")
         
-        self.refresh_button = ttk.Button(connection_frame, text="Refresh", command=self.refresh_ports)
+        self.refresh_button = ttk.Button(connection_frame, text="更新", command=self.refresh_ports)
         self.refresh_button.pack(side="left", padx=5)
-        self.connect_button = ttk.Button(connection_frame, text="Connect", command=self.on_connect)
+        self.connect_button = ttk.Button(connection_frame, text="接続", command=self.on_connect)
         self.connect_button.pack(side="left", padx=5)
 
         self.refresh_ports() # Initial port scan
@@ -80,12 +80,12 @@ class App(TkinterDnD.Tk):
         footer_frame.pack(fill="x", side="bottom", pady=(5, 0))
 
         # --- Header ---
-        ttk.Label(header_frame, text="M5Tab OMIP Configurator", font=("TkDefaultFont", 14, "bold")).pack(side="left")
-        settings_button = ttk.Button(header_frame, text="Settings")
+        ttk.Label(header_frame, text="M5Tab OMIP 設定ツール", font=("TkDefaultFont", 14, "bold")).pack(side="left")
+        settings_button = ttk.Button(header_frame, text="設定")
         settings_button.pack(side="right")
 
         # --- Sidebar (Volume Control) ---
-        ttk.Label(sidebar_frame, text="Volume").pack()
+        ttk.Label(sidebar_frame, text="音量").pack()
         self.volume_scale = ttk.Scale(sidebar_frame, orient="vertical", from_=100, to=0)
         self.volume_scale.pack(expand=True, fill="y", pady=5)
         self.volume_scale.set(75) # Default value
@@ -123,7 +123,7 @@ class App(TkinterDnD.Tk):
         # --- Footer (Page Navigation) ---
         self.page_number = 1
         self.total_pages = 5 # Example total pages
-        self.page_label = ttk.Label(footer_frame, text=f"Page {self.page_number} / {self.total_pages}")
+        self.page_label = ttk.Label(footer_frame, text=f"ページ {self.page_number} / {self.total_pages}")
         
         prev_button = ttk.Button(footer_frame, text="<", command=self.prev_page)
         next_button = ttk.Button(footer_frame, text=">", command=self.next_page)
@@ -133,14 +133,14 @@ class App(TkinterDnD.Tk):
         next_button.pack(side="left", padx=5)
 
         # --- Status Bar ---
-        self.status_label = ttk.Label(self, text="Status: Disconnected", padding="5", anchor="w")
+        self.status_label = ttk.Label(self, text="ステータス: 切断", padding="5", anchor="w")
         self.status_label.pack(side="bottom", fill="x")
 
         self.update_page_display() # Initial page load
         self._process_queue() # Start queue processor
 
     def _execute_action(self, action_string):
-        print(f"Executing action: {action_string}")
+        print(f"アクションを実行します: {action_string}")
         # Simple parsing for now, e.g., "ctrl+c"
         keys = action_string.lower().split('+')
         try:
@@ -159,7 +159,7 @@ class App(TkinterDnD.Tk):
                 else:
                     self.keyboard.release(key)
         except Exception as e:
-            print(f"Failed to execute key combination: {e}")
+            print(f"キーの組み合わせの実行に失敗しました: {e}")
 
     def _flash_cell(self, row, col):
         cell_frame = self.grid_cells[row][col]['frame']
@@ -168,7 +168,7 @@ class App(TkinterDnD.Tk):
         self.after(100, lambda: cell_frame.config(background=original_color))
 
     def _serial_reader(self):
-        print("Serial reader thread started.")
+        print("シリアルリーダーのスレッドが開始されました。")
         while not self.stop_thread:
             try:
                 if self.serial_connection and self.serial_connection.is_open:
@@ -195,12 +195,12 @@ class App(TkinterDnD.Tk):
                 else:
                     time.sleep(0.1) # Avoid busy-waiting if disconnected
             except serial.SerialException as e:
-                print(f"Serial error in reader thread: {e}")
+                print(f"シリアルリーダーのスレッドでエラーが発生しました: {e}")
                 self.stop_thread = True # Stop thread on error
                 self.serial_queue.put("serial_error")
             except Exception as e:
-                print(f"Error in reader thread: {e}")
-        print("Serial reader thread stopped.")
+                print(f"リーダーのスレッドでエラーが発生しました: {e}")
+        print("シリアルリーダーのスレッドが停止しました。")
 
     def _process_queue(self):
         try:
@@ -209,13 +209,13 @@ class App(TkinterDnD.Tk):
 
                 if msg == "serial_error":
                     self.disconnect()
-                    self.set_status("Status: Device disconnected or error.")
+                    self.set_status("ステータス: デバイスが切断されたか、エラーが発生しました。")
                     break
 
                 if msg.HasField("input_digital"):
                     port_id = msg.input_digital.port_id
                     state = msg.input_digital.state
-                    print(f"Received InputDigital: Port={port_id}, State={state}")
+                    print(f"InputDigital 受信: ポート={port_id}, 状態={state}")
                     
                     if state: # Only act on press, not release
                         if 0 <= port_id < 18:
@@ -232,7 +232,7 @@ class App(TkinterDnD.Tk):
                 elif msg.HasField("input_analog"):
                     port_id = msg.input_analog.port_id
                     value = msg.input_analog.value
-                    print(f"Received InputAnalog: Port={port_id}, Value={value:.2f}")
+                    print(f"InputAnalog 受信: ポート={port_id}, 値={value:.2f}")
 
                     if port_id == 18: # Volume slider
                         # Assuming the scale is 0-100
@@ -245,12 +245,12 @@ class App(TkinterDnD.Tk):
 
     def open_action_dialog(self, row, col):
         dialog = tk.Toplevel(self)
-        dialog.title(f"Set Action for Port {row*6+col}")
+        dialog.title(f"ポート {row*6+col} のアクション設定")
         dialog.geometry("300x100")
         dialog.transient(self)
         dialog.grab_set()
 
-        ttk.Label(dialog, text="Action (e.g., 'ctrl+c'):").pack(padx=10, pady=5)
+        ttk.Label(dialog, text="アクション (例: 'ctrl+c'):").pack(padx=10, pady=5)
         
         action_var = tk.StringVar()
         cell_index = row * 6 + col
@@ -269,9 +269,9 @@ class App(TkinterDnD.Tk):
 
         button_frame = ttk.Frame(dialog)
         button_frame.pack(pady=5)
-        save_button = ttk.Button(button_frame, text="Save", command=save_action)
+        save_button = ttk.Button(button_frame, text="保存", command=save_action)
         save_button.pack(side="left", padx=5)
-        cancel_button = ttk.Button(button_frame, text="Cancel", command=dialog.destroy)
+        cancel_button = ttk.Button(button_frame, text="キャンセル", command=dialog.destroy)
         cancel_button.pack(side="left", padx=5)
 
     def prev_page(self):
@@ -285,7 +285,7 @@ class App(TkinterDnD.Tk):
             self.update_page_display()
 
     def update_page_display(self):
-        self.page_label.config(text=f"Page {self.page_number} / {self.total_pages}")
+        self.page_label.config(text=f"ページ {self.page_number} / {self.total_pages}")
         print(f"Loading page {self.page_number}")
 
         config = self.page_configs[self.page_number]
@@ -295,7 +295,7 @@ class App(TkinterDnD.Tk):
                 cell_config = config[cell_index]
                 cell_ui = self.grid_cells[r][c]
 
-                cell_ui['action'].config(text=cell_config['action'] or f"Port {cell_index}")
+                cell_ui['action'].config(text=cell_config['action'] or f"ポート {cell_index}")
                 if cell_config['image']:
                     cell_ui['icon'].config(image=cell_config['image'])
                     # Keep the image reference to prevent garbage collection
@@ -309,7 +309,7 @@ class App(TkinterDnD.Tk):
             self.sync_page_to_device()
 
     def sync_page_to_device(self):
-        self.set_status(f"Syncing page {self.page_number} to device...")
+        self.set_status(f"ページ {self.page_number} をデバイスに同期中...")
         config = self.page_configs[self.page_number]
         for i, cell_config in enumerate(config):
             icon_path = cell_config.get('icon')
@@ -318,10 +318,10 @@ class App(TkinterDnD.Tk):
                 try:
                     self.send_image_to_device(icon_path, screen_id)
                 except Exception as e:
-                    self.set_status(f"Error syncing icon for port {i}: {e}")
+                    self.set_status(f"ポート {i} のアイコン同期エラー: {e}")
                     # Stop syncing on error to avoid flooding with failures
                     break 
-        self.set_status(f"Page {self.page_number} synced.")
+        self.set_status(f"ページ {self.page_number} 同期完了。")
 
 
     def refresh_ports(self):
@@ -331,18 +331,18 @@ class App(TkinterDnD.Tk):
             self.port_variable.set(ports[0])
         else:
             self.port_variable.set("")
-        print("Refreshed serial ports.")
+        print("シリアルポートを更新しました。")
 
     def on_connect(self):
         if self.serial_connection is None:
             port = self.port_variable.get()
             if not port:
-                self.set_status("Status: No port selected.")
+                self.set_status("ステータス: ポートが選択されていません。")
                 return
             try:
                 self.serial_connection = serial.Serial(port, 115200, timeout=1)
-                self.set_status(f"Status: Connected to {port}")
-                self.connect_button.config(text="Disconnect")
+                self.set_status(f"ステータス: {port} に接続しました")
+                self.connect_button.config(text="切断")
                 self.port_combobox.config(state="disabled")
                 self.refresh_button.config(state="disabled")
                 
@@ -352,10 +352,10 @@ class App(TkinterDnD.Tk):
                 self.serial_thread.daemon = True
                 self.serial_thread.start()
 
-                print(f"Successfully connected to {port}")
+                print(f"{port} に正常に接続しました")
             except serial.SerialException as e:
-                self.set_status(f"Status: Failed to connect to {port}")
-                print(f"Error: {e}")
+                self.set_status(f"ステータス: {port} への接続に失敗しました")
+                print(f"エラー: {e}")
         else:
             self.disconnect()
 
@@ -370,22 +370,22 @@ class App(TkinterDnD.Tk):
             try:
                 self.serial_connection.close()
             except Exception as e:
-                print(f"Error on disconnect: {e}")
+                print(f"切断時にエラーが発生しました: {e}")
         self.serial_connection = None
-        self.set_status("Status: Disconnected")
-        self.connect_button.config(text="Connect")
+        self.set_status("ステータス: 切断")
+        self.connect_button.config(text="接続")
         self.port_combobox.config(state="readonly")
         self.refresh_button.config(state="normal")
-        print("Disconnected.")
+        print("切断しました。")
 
     def on_drop(self, event, row, col):
         filepath = event.data.strip('{}')
-        print(f"Dropped: '{filepath}' on cell ({row}, {col})")
+        print(f"セル ({row}, {col}) に '{filepath}' がドロップされました")
 
         allowed_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp']
         _, extension = os.path.splitext(filepath)
         if extension.lower() not in allowed_extensions:
-            print(f"Skipped: Not a supported image file ({extension}).")
+            print(f"スキップ: サポートされていない画像ファイルです ({extension})。")
             return
 
         try:
@@ -402,18 +402,18 @@ class App(TkinterDnD.Tk):
             self.update_page_display()
 
         except Exception as e:
-            print(f"Error processing image: {e}")
-            self.set_status(f"Error: Could not load image {os.path.basename(filepath)}")
+            print(f"画像の処理中にエラー: {e}")
+            self.set_status(f"エラー: 画像 {os.path.basename(filepath)} を読み込めませんでした")
             return
 
         if self.serial_connection and self.serial_connection.is_open:
             screen_id = row * 6 + col
             self.send_image_to_device(filepath, screen_id)
         else:
-            self.set_status("Info: Image set in GUI, but not connected to device.")
+            self.set_status("情報: GUIに画像を設定しましたが、デバイスに接続されていません。")
 
     def send_image_to_device(self, image_path, screen_id):
-        self.set_status(f"Sending {os.path.basename(image_path)}...")
+        self.set_status(f"{os.path.basename(image_path)} を送信中...")
         try:
             img = Image.open(image_path)
             jpeg_buffer = io.BytesIO()
@@ -429,7 +429,7 @@ class App(TkinterDnD.Tk):
                 is_last = (offset + len(chunk)) == total_size
                 
                 progress = int(((offset + len(chunk)) / total_size) * 100)
-                self.set_status(f"Sending... {progress}%")
+                self.set_status(f"送信中... {progress}%")
 
                 feedback_msg = omip_pb2.FeedbackImage(
                     screen_id=screen_id,
@@ -447,11 +447,11 @@ class App(TkinterDnD.Tk):
                 
                 offset += len(chunk)
 
-            self.set_status(f"Successfully sent {os.path.basename(image_path)}.")
+            self.set_status(f"{os.path.basename(image_path)} の送信に成功しました。")
 
         except Exception as e:
-            print(f"Failed to send image: {e}")
-            self.set_status(f"Error: Failed to send image.")
+            print(f"画像の送信に失敗しました: {e}")
+            self.set_status(f"エラー: 画像の送信に失敗しました。")
 
     def _send_serial_data(self, data):
         if not self.serial_connection or not self.serial_connection.is_open:
@@ -469,7 +469,7 @@ class App(TkinterDnD.Tk):
 
     def _wait_for_ack(self):
         if not self.serial_connection or not self.serial_connection.is_open:
-            raise serial.SerialException("Device not connected.")
+            raise serial.SerialException("デバイスが接続されていません。")
         deadline = time.monotonic() + ACK_TIMEOUT_SEC
         while True:
             remaining = deadline - time.monotonic()
@@ -487,15 +487,15 @@ class App(TkinterDnD.Tk):
             if byte == ACK_READY:
                 return
             if byte == ACK_ERROR:
-                raise RuntimeError("Device reported an error.")
-        raise TimeoutError("Timed out waiting for ACK from device.")
+                raise RuntimeError("デバイスがエラーを報告しました。")
+        raise TimeoutError("デバイスからのACK待機中にタイムアウトしました。")
 
     def set_status(self, message):
         self.status_label.config(text=message)
         self.update_idletasks() # Force GUI update
 
     def save_config(self):
-        print("Saving configuration...")
+        print("設定を保存しています...")
         save_data = {}
         for page_num, configs in self.page_configs.items():
             save_data[page_num] = []
@@ -508,13 +508,13 @@ class App(TkinterDnD.Tk):
         try:
             with open(CONFIG_FILE, 'w') as f:
                 json.dump(save_data, f, indent=4)
-            print("Configuration saved.")
+            print("設定を保存しました。")
         except Exception as e:
-            print(f"Error saving config: {e}")
-            self.set_status(f"Error: Could not save configuration.")
+            print(f"設定の保存中にエラー: {e}")
+            self.set_status(f"エラー: 設定を保存できませんでした。")
 
     def load_config(self):
-        print("Loading configuration...")
+        print("設定を読み込んでいます...")
         try:
             with open(CONFIG_FILE, 'r') as f:
                 loaded_data = json.load(f)
@@ -536,18 +536,18 @@ class App(TkinterDnD.Tk):
                                 photo = ImageTk.PhotoImage(image)
                                 self.page_configs[page_num][i]['image'] = photo
                             except Exception as e:
-                                print(f"Error loading image {icon_path}: {e}")
+                                print(f"画像 {icon_path} の読み込みエラー: {e}")
                                 self.page_configs[page_num][i]['image'] = None # Clear if image fails to load
                         else:
                             self.page_configs[page_num][i]['icon'] = None
                             self.page_configs[page_num][i]['image'] = None
 
-            print("Configuration loaded.")
+            print("設定を読み込みました。")
         except FileNotFoundError:
-            print("No configuration file found. Starting with default.")
+            print("設定ファイルが見つかりません。デフォルトで起動します。")
         except Exception as e:
-            print(f"Error loading config: {e}")
-            self.set_status("Error: Could not load configuration.")
+            print(f"設定の読み込み中にエラー: {e}")
+            self.set_status("エラー: 設定を読み込めませんでした。")
 
     def on_closing(self):
         self.save_config()
