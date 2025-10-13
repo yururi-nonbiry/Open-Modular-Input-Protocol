@@ -1,4 +1,5 @@
 pyserial
 protobuf
-nanopb
+tkinterdnd2
 Pillow
+pynput
