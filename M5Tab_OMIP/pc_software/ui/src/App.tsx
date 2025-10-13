@@ -23,7 +23,6 @@ function App() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
   const [totalPages] = useState<number>(5);
-  const [volume, setVolume] = useState<number>(75);
   const [flashingCell, setFlashingCell] = useState<number | null>(null);
   const [pageConfigs, setPageConfigs] = useState<PageConfigs>({});
   const [editingCell, setEditingCell] = useState<{page: number, index: number} | null>(null);
@@ -104,7 +103,7 @@ function App() {
             if (portId === 19) { handleNextPage(); }
             else if (portId === 20) { handlePrevPage(); }
           } else if (response.event === 'input_analog') {
-            if (response.port_id === 18) { setVolume(response.value * 100); }
+            // PC Volume is handled by the main process, no UI update needed here.
           }
         }
       } catch (e) {}
@@ -242,17 +241,6 @@ function App() {
       {/* Body */}
       <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
         
-        {/* Sidebar */}
-        <Box sx={{ width: 120, p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider' }}>
-          <Typography id="volume-slider-label" gutterBottom>Volume</Typography>
-          <Slider
-            aria-labelledby="volume-slider-label"
-            orientation="vertical"
-            value={volume}
-            onChange={(_event, newValue) => setVolume(newValue as number)}
-            sx={{ flexGrow: 1, mt: 2, mb: 2}}
-          />
-        </Box>
 
         {/* Main Content */}
         <Box sx={{ flexGrow: 1, p: 2, overflowY: 'auto' }}>
