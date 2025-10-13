@@ -37,6 +37,7 @@ constexpr float SIDEBAR_WIDTH_RATIO = 0.0f;
 int32_t g_headerHeight = MIN_HEADER_HEIGHT;
 float g_current_volume = 0.5f;
 uint8_t g_brightness = 128; // Brightness level (0-255)
+uint8_t g_beepVolume = 128;   // Beep volume level (0-255)
 
 #define DEVICE_ID 1
 #define SCREEN_ID_FULL 0
@@ -95,6 +96,8 @@ struct LayoutInfo {
     int32_t cell_height = 0;
     ButtonRegion brightness_up_btn;
     ButtonRegion brightness_down_btn;
+    ButtonRegion beep_vol_up_btn;
+    ButtonRegion beep_vol_down_btn;
 };
 
 LayoutInfo g_layout;
@@ -458,17 +461,34 @@ static float compute_volume_from_y(int32_t y) {
 void draw_header() {
     M5.Display.fillRect(0, 0, M5.Display.width(), g_headerHeight, COLOR_HEADER_BG);
     M5.Display.setTextColor(WHITE, COLOR_HEADER_BG);
+    
+    M5.Display.setTextDatum(middle_left);
     M5.Display.setTextSize(2);
-    M5.Display.setCursor(12, g_headerHeight / 2 - 8);
-    M5.Display.print("M5Tab OMIP");
+    M5.Display.drawString("M5Tab OMIP", 12, g_headerHeight / 2);
 
-    // Draw brightness buttons
+    // --- Draw Brightness Buttons ---
+    M5.Display.setTextDatum(middle_center);
     M5.Display.setTextSize(3);
     M5.Display.drawRect(g_layout.brightness_down_btn.x, g_layout.brightness_down_btn.y, g_layout.brightness_down_btn.w, g_layout.brightness_down_btn.h, WHITE);
     M5.Display.drawString("-", g_layout.brightness_down_btn.x + g_layout.brightness_down_btn.w / 2, g_layout.brightness_down_btn.y + g_layout.brightness_down_btn.h / 2);
     M5.Display.drawRect(g_layout.brightness_up_btn.x, g_layout.brightness_up_btn.y, g_layout.brightness_up_btn.w, g_layout.brightness_up_btn.h, WHITE);
     M5.Display.drawString("+", g_layout.brightness_up_btn.x + g_layout.brightness_up_btn.w / 2, g_layout.brightness_up_btn.y + g_layout.brightness_up_btn.h / 2);
-    M5.Display.setTextDatum(top_left);
+    M5.Display.setTextSize(1);
+    M5.Display.drawString("BRT", g_layout.brightness_down_btn.x + (g_layout.brightness_up_btn.x - g_layout.brightness_down_btn.x + g_layout.brightness_up_btn.w) / 2, g_layout.brightness_down_btn.y - 6);
+
+    // --- Draw Beep Volume Buttons ---
+    M5.Display.setTextSize(3);
+    M5.Display.drawRect(g_layout.beep_vol_down_btn.x, g_layout.beep_vol_down_btn.y, g_layout.beep_vol_down_btn.w, g_layout.beep_vol_down_btn.h, WHITE);
+    M5.Display.drawString("-", g_layout.beep_vol_down_btn.x + g_layout.beep_vol_down_btn.w / 2, g_layout.beep_vol_down_btn.y + g_layout.beep_vol_down_btn.h / 2);
+    M5.Display.drawRect(g_layout.beep_vol_up_btn.x, g_layout.beep_vol_up_btn.y, g_layout.beep_vol_up_btn.w, g_layout.beep_vol_up_btn.h, WHITE);
+    M5.Display.drawString("+", g_layout.beep_vol_up_btn.x + g_layout.beep_vol_up_btn.w / 2, g_layout.beep_vol_up_btn.y + g_layout.beep_vol_up_btn.h / 2);
+    M5.Display.setTextSize(1);
+    M5.Display.drawString("BEEP", g_layout.beep_vol_down_btn.x + (g_layout.beep_vol_up_btn.x - g_layout.beep_vol_down_btn.x + g_layout.beep_vol_up_btn.w) / 2, g_layout.beep_vol_down_btn.y - 6);
+    M5.Display.setTextSize(2);
+    String vol_str = String(g_beepVolume * 100 / 255);
+    M5.Display.drawString(vol_str, g_layout.beep_vol_down_btn.x + (g_layout.beep_vol_up_btn.x - g_layout.beep_vol_down_btn.x + g_layout.beep_vol_up_btn.w) / 2, g_layout.beep_vol_down_btn.y + g_layout.beep_vol_down_btn.h / 2);
+
+    M5.Display.setTextDatum(top_left); // Reset datum
 }
 
 void draw_sidebar(float volume) {
@@ -504,6 +524,11 @@ void draw_ui() {
     int32_t btn_margin = (g_headerHeight - btn_size) / 2;
     g_layout.brightness_up_btn = {g_layout.screen_width - btn_size - btn_margin, btn_margin, btn_size, btn_size};
     g_layout.brightness_down_btn = {g_layout.brightness_up_btn.x - btn_size - btn_margin, btn_margin, btn_size, btn_size};
+
+    // Calculate beep volume button positions to the left of brightness controls
+    int32_t separator_margin = btn_margin * 2;
+    g_layout.beep_vol_up_btn = {g_layout.brightness_down_btn.x - separator_margin - btn_size, btn_margin, btn_size, btn_size};
+    g_layout.beep_vol_down_btn = {g_layout.beep_vol_up_btn.x - btn_size - btn_margin, btn_margin, btn_size, btn_size};
 
     M5.Display.fillScreen(BLACK);
     draw_header();
@@ -544,6 +569,22 @@ void handle_touch() {
 
     // Handle header buttons on press
     if (pressed_begin) {
+        // Beep volume controls
+        if (point_in_button(x, y, g_layout.beep_vol_up_btn)) {
+            g_beepVolume = std::min(255, g_beepVolume + 16);
+            M5.Speaker.setVolume(g_beepVolume);
+            M5.Speaker.tone(1000, 50); // Play a short beep to confirm
+            draw_header(); // Redraw header to show new volume
+            return; 
+        } else if (point_in_button(x, y, g_layout.beep_vol_down_btn)) {
+            g_beepVolume = std::max(0, g_beepVolume - 16);
+            M5.Speaker.setVolume(g_beepVolume);
+            M5.Speaker.tone(800, 50); // Play a short beep to confirm
+            draw_header(); // Redraw header to show new volume
+            return;
+        }
+
+        // Brightness controls
         if (point_in_button(x, y, g_layout.brightness_up_btn)) {
             g_brightness = std::min(255, g_brightness + 32);
             M5.Display.setBrightness(g_brightness);
@@ -651,6 +692,7 @@ void setup() {
   M5.begin(cfg);
   M5.Display.setRotation(3);
   M5.Display.setBrightness(g_brightness);
+  M5.Speaker.setVolume(g_beepVolume);
   draw_ui();
   Serial.begin(115200);
   setup_ble();
