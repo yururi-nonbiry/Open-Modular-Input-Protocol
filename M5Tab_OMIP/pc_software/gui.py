@@ -34,6 +34,7 @@ class App(TkinterDnD.Tk):
         self.serial_thread = None
         self.stop_thread = False
         self.serial_queue = queue.Queue()
+        self.ack_queue = queue.Queue()
         self.keyboard = keyboard.Controller()
 
         # --- Data Structure for Page Configurations ---
@@ -79,7 +80,7 @@ class App(TkinterDnD.Tk):
         footer_frame.pack(fill="x", side="bottom", pady=(5, 0))
 
         # --- Header ---
-        ttk.Label(header_frame, text="M5Tab OMIP Configurator", font=("-size", 14, "bold")).pack(side="left")
+        ttk.Label(header_frame, text="M5Tab OMIP Configurator", font=("TkDefaultFont", 14, "bold")).pack(side="left")
         settings_button = ttk.Button(header_frame, text="Settings")
         settings_button.pack(side="right")
 
@@ -112,9 +113,9 @@ class App(TkinterDnD.Tk):
 
                 # Drag and Drop bindings
                 cell_frame.drop_target_register(DND_FILES)
-                cell_frame.dnd_bind(''<<Drop>>'', lambda e, r=r, c=c: self.on_drop(e, r, c))
+                cell_frame.dnd_bind('<<Drop>>', lambda e, r=r, c=c: self.on_drop(e, r, c))
                 icon_label.drop_target_register(DND_FILES)
-                icon_label.dnd_bind(''<<Drop>>'', lambda e, r=r, c=c: self.on_drop(e, r, c))
+                icon_label.dnd_bind('<<Drop>>', lambda e, r=r, c=c: self.on_drop(e, r, c))
                 
                 row_list.append({'frame': cell_frame, 'icon': icon_label, 'action': action_label})
             self.grid_cells.append(row_list)
@@ -171,20 +172,26 @@ class App(TkinterDnD.Tk):
         while not self.stop_thread:
             try:
                 if self.serial_connection and self.serial_connection.is_open:
-                    # Wait for start byte
-                    if self.serial_connection.read(1) == b'~':
-                        # Read length
-                        length_byte = self.serial_connection.read(1)
-                        if not length_byte:
-                            continue
-                        length = length_byte[0]
-                        
-                        # Read payload
-                        data = self.serial_connection.read(length)
-                        if len(data) == length:
-                            wrapper_msg = omip_pb2.WrapperMessage()
-                            wrapper_msg.ParseFromString(data)
-                            self.serial_queue.put(wrapper_msg)
+                    first_byte = self.serial_connection.read(1)
+                    if not first_byte:
+                        continue
+                    if first_byte in (ACK_READY, ACK_ERROR):
+                        self.ack_queue.put(first_byte)
+                        continue
+                    if first_byte != b'~':
+                        # Ignore stray bytes that are neither ACK nor frame start
+                        continue
+
+                    length_byte = self.serial_connection.read(1)
+                    if not length_byte:
+                        continue
+                    length = length_byte[0]
+
+                    data = self.serial_connection.read(length)
+                    if len(data) == length:
+                        wrapper_msg = omip_pb2.WrapperMessage()
+                        wrapper_msg.ParseFromString(data)
+                        self.serial_queue.put(wrapper_msg)
                 else:
                     time.sleep(0.1) # Avoid busy-waiting if disconnected
             except serial.SerialException as e:
@@ -414,6 +421,8 @@ class App(TkinterDnD.Tk):
             image_data = jpeg_buffer.getvalue()
             total_size = len(image_data)
 
+            self._clear_ack_queue()
+
             offset = 0
             while offset < total_size:
                 chunk = image_data[offset:offset + CHUNK_SIZE]
@@ -451,17 +460,34 @@ class App(TkinterDnD.Tk):
         self.serial_connection.write(bytes([len(data)]))
         self.serial_connection.write(data)
 
+    def _clear_ack_queue(self):
+        while not self.ack_queue.empty():
+            try:
+                self.ack_queue.get_nowait()
+            except queue.Empty:
+                break
+
     def _wait_for_ack(self):
         if not self.serial_connection or not self.serial_connection.is_open:
             raise serial.SerialException("Device not connected.")
         deadline = time.monotonic() + ACK_TIMEOUT_SEC
-        while time.monotonic() < deadline:
-            if self.serial_connection.in_waiting > 0:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            byte = None
+            try:
+                byte = self.ack_queue.get(timeout=min(remaining, 0.1))
+            except queue.Empty:
+                pass
+            if byte is None and self.serial_connection.in_waiting > 0:
                 byte = self.serial_connection.read(1)
-                if byte == ACK_READY:
-                    return
-                if byte == ACK_ERROR:
-                    raise RuntimeError("Device reported an error.")
+            if not byte:
+                continue
+            if byte == ACK_READY:
+                return
+            if byte == ACK_ERROR:
+                raise RuntimeError("Device reported an error.")
         raise TimeoutError("Timed out waiting for ACK from device.")
 
     def set_status(self, message):
