@@ -121,6 +121,7 @@ SwipeState g_swipe_state;
 
 namespace {
 constexpr int32_t kCellMargin = 4;
+constexpr float kGridCellScale = 0.80f;
 constexpr size_t kMaxCapabilityPorts = 22; // 18 grid + 1 analog + 2 swipe + 1 screen
 
 struct CapabilityPortsPayload {
@@ -301,6 +302,13 @@ bool resolve_image_region(uint32_t screen_id, ScreenRegion& region) {
             offset_y = 0;
             usable_h = cell_h;
         }
+
+        int32_t scaled_w = std::max<int32_t>(static_cast<int32_t>(std::round(static_cast<float>(usable_w) * kGridCellScale)), 1);
+        int32_t scaled_h = std::max<int32_t>(static_cast<int32_t>(std::round(static_cast<float>(usable_h) * kGridCellScale)), 1);
+        offset_x += (usable_w - scaled_w) / 2;
+        offset_y += (usable_h - scaled_h) / 2;
+        usable_w = scaled_w;
+        usable_h = scaled_h;
 
         region.x = cell_x + offset_x;
         region.y = cell_y + offset_y;
