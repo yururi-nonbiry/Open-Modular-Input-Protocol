@@ -351,7 +351,26 @@ void handle_feedback_image(const omip_FeedbackImage& img) {
         if (img.chunk_offset == 0) {
             reset_image_reconstruction();
             if (img.total_size == 0) {
-                success = false;
+                ScreenRegion region;
+                bool has_region = resolve_image_region(img.screen_id, region);
+                if (has_region) {
+                    M5.Display.fillRect(region.x, region.y, region.w, region.h, BLACK);
+                } else {
+                    M5.Display.fillScreen(BLACK);
+                    draw_header();
+                    for (int32_t r = 0; r <= GRID_ROWS; ++r) {
+                        int32_t y = g_layout.grid_origin_y + r * g_layout.cell_height;
+                        M5.Display.drawFastHLine(g_layout.grid_origin_x, y, g_layout.grid_width, COLOR_GRID_LINE);
+                    }
+                    for (int32_t c = 0; c <= GRID_COLS; ++c) {
+                        int32_t x = g_layout.grid_origin_x + c * g_layout.cell_width;
+                        M5.Display.drawFastVLine(x, g_layout.grid_origin_y, g_layout.grid_height, COLOR_GRID_LINE);
+                    }
+                    if (g_layout.sidebar_width > 0) {
+                        M5.Display.drawFastVLine(g_layout.sidebar_x, g_layout.grid_origin_y, g_layout.grid_height, COLOR_GRID_LINE);
+                        draw_sidebar(g_current_volume);
+                    }
+                }
                 break;
             }
             g_image_recon.buffer = static_cast<uint8_t*>(ps_malloc(img.total_size));

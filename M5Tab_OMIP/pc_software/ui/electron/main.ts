@@ -280,8 +280,8 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle('image:upload', async (_event, payload: { screenId: number; page?: number; filePath?: string | null; dataUrl?: string | null }) => {
-    const { screenId, page, filePath, dataUrl } = payload ?? {};
+  ipcMain.handle('image:upload', async (_event, payload: { screenId: number; page?: number; filePath?: string | null; dataUrl?: string | null; clear?: boolean }) => {
+    const { screenId, page, filePath, dataUrl, clear } = payload ?? {};
     if (typeof screenId !== 'number' || Number.isNaN(screenId)) {
       throw new Error('screenId is required for image upload.');
     }
@@ -299,11 +299,15 @@ app.whenReady().then(() => {
       command.file_path = filePath;
     }
 
-    if (!command.file_path && typeof dataUrl === 'string' && dataUrl.length > 0) {
+    if (clear === true) {
+      command.clear = true;
+    }
+
+    if (!command.file_path && !command.clear && typeof dataUrl === 'string' && dataUrl.length > 0) {
       command.data_url = dataUrl;
     }
 
-    if (!command.file_path && !command.data_url) {
+    if (!command.file_path && !command.data_url && !command.clear) {
       throw new Error('No image data provided for upload.');
     }
 

@@ -164,11 +164,29 @@ class BackendService:
         image.save(jpeg_buffer, format='JPEG', quality=85)
         return jpeg_buffer.getvalue()
 
-    def send_image_to_device(self, screen_id: int, *, file_path: Optional[str] = None, data_url: Optional[str] = None) -> None:
+    def send_image_to_device(self, screen_id: int, *, file_path: Optional[str] = None, data_url: Optional[str] = None, clear: bool = False) -> None:
         if screen_id is None:
             raise ValueError("screen_id is required.")
         if not self.serial_connection or not self.serial_connection.is_open:
             raise serial.SerialException("Device not connected.")
+
+        if clear:
+            self._clear_ack_queue()
+            feedback_msg = omip_pb2.FeedbackImage(
+                screen_id=screen_id,
+                format=omip_pb2.FeedbackImage.ImageFormat.JPEG,
+                total_size=0,
+                chunk_offset=0,
+                chunk_data=b'',
+                is_last_chunk=True
+            )
+            wrapper_msg = omip_pb2.WrapperMessage(feedback_image=feedback_msg)
+            serialized_msg = wrapper_msg.SerializeToString()
+
+            with self.serial_lock:
+                self._send_serial_data(serialized_msg)
+                self._wait_for_ack()
+            return
 
         image_data: bytes
         try:
@@ -267,11 +285,17 @@ class BackendService:
             screen_id = command.get('screen_id')
             file_path = command.get('file_path')
             data_url = command.get('data_url')
+            clear_flag = command.get('clear')
             if screen_id is None:
                 self.send_response({'command': 'send_image', 'status': 'error', 'message': 'screen_id is required'})
                 return
             try:
-                self.send_image_to_device(int(screen_id), file_path=file_path, data_url=data_url)
+                self.send_image_to_device(
+                    int(screen_id),
+                    file_path=file_path,
+                    data_url=data_url,
+                    clear=bool(clear_flag)
+                )
                 self.send_response({'command': 'send_image', 'status': 'success', 'screen_id': int(screen_id)})
             except Exception as e:
                 self.send_response({'command': 'send_image', 'status': 'error', 'message': str(e)})

@@ -62,27 +62,29 @@ function App() {
     }
   };
 
-  const createUploadPayload = useCallback((screenId: number, cell: CellConfig, targetPage: number): Record<string, unknown> | null => {
-    if (!cell?.icon) {
-      return null;
-    }
-    if (cell.icon.startsWith('data:')) {
-      return { screenId, page: targetPage, dataUrl: cell.icon };
-    }
-    if (isLikelyAbsolutePath(cell.icon)) {
-      return { screenId, page: targetPage, filePath: cell.icon };
-    }
-    return null;
-  }, []);
+const createUploadPayload = useCallback((screenId: number, cell: CellConfig, targetPage: number): Record<string, unknown> | null => {
+  if (!cell || !cell.icon) {
+    return { screenId, page: targetPage, clear: true };
+  }
+  if (cell.icon.startsWith('data:')) {
+    return { screenId, page: targetPage, dataUrl: cell.icon };
+  }
+  if (isLikelyAbsolutePath(cell.icon)) {
+    return { screenId, page: targetPage, filePath: cell.icon };
+  }
+  return { screenId, page: targetPage, clear: true };
+}, []);
 
-  const syncPageIcons = useCallback(
-    async (targetPage: number, override?: CellConfig[]) => {
+const syncPageIcons = useCallback(
+  async (targetPage: number, override?: CellConfig[]) => {
       if (!hasIpc || !isConnected || !window.ipcRenderer) {
         return;
       }
       const configs = override ?? pageConfigs[targetPage] ?? [];
-      for (let index = 0; index < configs.length; index += 1) {
-        const payload = createUploadPayload(index, configs[index], targetPage);
+      const totalCells = Math.max(configs.length, 18);
+      for (let index = 0; index < totalCells; index += 1) {
+        const cell = configs[index] ?? { icon: null, action: '' };
+        const payload = createUploadPayload(index, cell, targetPage);
         if (!payload) {
           continue;
         }
