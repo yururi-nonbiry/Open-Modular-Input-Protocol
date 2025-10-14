@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, nativeImage } from "electron";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import readline from "node:readline";
+import { randomUUID } from "node:crypto";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 process.env.DIST = path.join(__dirname, "../dist");
@@ -13,6 +14,8 @@ let pythonProcess = null;
 let stdoutReader = null;
 const pendingResponses = /* @__PURE__ */ new Map();
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
+const ICON_TARGET_SIZE = 160;
+let iconStorageDir = null;
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
@@ -164,9 +167,16 @@ app.on("activate", () => {
     createWindow();
   }
 });
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   startPythonBackend();
   createWindow();
+  try {
+    iconStorageDir = path.join(app.getPath("userData"), "icons");
+    await fs.mkdir(iconStorageDir, { recursive: true });
+  } catch (error) {
+    console.error("Failed to prepare icon storage directory:", error);
+    iconStorageDir = null;
+  }
   ipcMain.handle("serial:get_ports", async () => {
     const response = await requestBackend({ type: "get_ports" }, "get_ports");
     return Array.isArray(response.ports) ? response.ports : [];
@@ -196,6 +206,44 @@ app.whenReady().then(() => {
       console.error("Failed to send set_page to backend", error);
       throw error;
     }
+  });
+  ipcMain.handle("image:import_and_resize", async (_event, payload) => {
+    const sourcePath = typeof payload?.filePath === "string" && payload.filePath.length > 0 ? payload.filePath : null;
+    const sourceDataUrl = typeof payload?.dataUrl === "string" && payload.dataUrl.length > 0 ? payload.dataUrl : null;
+    if (!sourcePath && !sourceDataUrl) {
+      throw new Error("No image data provided for import.");
+    }
+    let image = null;
+    if (sourcePath) {
+      try {
+        const fileBuffer = await fs.readFile(sourcePath);
+        image = nativeImage.createFromBuffer(fileBuffer);
+      } catch (error) {
+        console.warn(`Failed to load image from file path (${sourcePath}):`, error);
+      }
+    }
+    if ((!image || image.isEmpty()) && sourceDataUrl) {
+      image = nativeImage.createFromDataURL(sourceDataUrl);
+    }
+    if (!image || image.isEmpty()) {
+      throw new Error("Failed to load source image.");
+    }
+    const resized = image.resize({ width: ICON_TARGET_SIZE, height: ICON_TARGET_SIZE, quality: "best" });
+    if (resized.isEmpty()) {
+      throw new Error("Failed to resize image.");
+    }
+    const jpegBuffer = resized.toJPEG(90);
+    const targetDir = iconStorageDir ?? path.join(app.getPath("userData"), "icons");
+    try {
+      await fs.mkdir(targetDir, { recursive: true });
+    } catch (error) {
+      console.warn("Failed to ensure icon storage directory exists:", error);
+    }
+    const fileName = `icon-${Date.now()}-${randomUUID()}.jpg`;
+    const storedPath = path.join(targetDir, fileName);
+    await fs.writeFile(storedPath, jpegBuffer);
+    const resizedDataUrl = `data:image/jpeg;base64,${jpegBuffer.toString("base64")}`;
+    return { storedPath, dataUrl: resizedDataUrl };
   });
   ipcMain.handle("image:get_base64", async (_event, filePath) => {
     try {

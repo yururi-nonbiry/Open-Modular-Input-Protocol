@@ -12,9 +12,34 @@ export interface DroppedIconPayload {
     filePath?: string | null;
 }
 
+const ICON_TARGET_SIZE = 160;
+
 const isLikelyAbsolutePath = (value: string) => {
     if (!value) return false;
     return /^[a-zA-Z]:[\\/]/.test(value) || value.startsWith('\\\\') || value.startsWith('/');
+};
+
+const resizeDataUrlWithCanvas = async (sourceDataUrl: string, size: number): Promise<string> => {
+    if (typeof document === 'undefined') {
+        throw new Error('Document is unavailable; cannot resize image in renderer.');
+    }
+    return new Promise<string>((resolve, reject) => {
+        const imageElement = new Image();
+        imageElement.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d');
+            if (!context) {
+                reject(new Error('Canvas context is unavailable.'));
+                return;
+            }
+            context.drawImage(imageElement, 0, 0, size, size);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        imageElement.onerror = (error) => reject(error);
+        imageElement.src = sourceDataUrl;
+    });
 };
 
 interface GridCellProps {
@@ -40,14 +65,48 @@ export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellPr
         const reader = new FileReader();
         const fileWithPath = file as File & { path?: string };
         const droppedFilePath = typeof fileWithPath.path === 'string' ? fileWithPath.path : undefined;
-        reader.onload = () => {
+        reader.onload = async () => {
             const result = typeof reader.result === 'string' ? reader.result : null;
             if (result) {
-                setImageUrl(result);
-                onIconDrop({
-                    dataUrl: result,
-                    filePath: droppedFilePath ?? null,
-                });
+                const hasIpc = typeof window !== 'undefined' && Boolean(window.ipcRenderer);
+                if (hasIpc) {
+                    try {
+                        const response = await window.ipcRenderer!.invoke('image:import_and_resize', {
+                            filePath: droppedFilePath ?? null,
+                            dataUrl: result,
+                        }) as { dataUrl?: string; storedPath?: string };
+
+                        const resizedDataUrl = typeof response?.dataUrl === 'string' ? response.dataUrl : result;
+                        const storedPath = typeof response?.storedPath === 'string'
+                            ? response.storedPath
+                            : droppedFilePath ?? null;
+
+                        setImageUrl(resizedDataUrl);
+                        onIconDrop({
+                            dataUrl: resizedDataUrl,
+                            filePath: storedPath,
+                        });
+                        return;
+                    } catch (error) {
+                        console.error('Failed to import image via IPC:', error);
+                    }
+                }
+
+                try {
+                    const resizedDataUrl = await resizeDataUrlWithCanvas(result, ICON_TARGET_SIZE);
+                    setImageUrl(resizedDataUrl);
+                    onIconDrop({
+                        dataUrl: resizedDataUrl,
+                        filePath: droppedFilePath ?? null,
+                    });
+                } catch (error) {
+                    console.error('Failed to resize image in renderer:', error);
+                    setImageUrl(result);
+                    onIconDrop({
+                        dataUrl: result,
+                        filePath: droppedFilePath ?? null,
+                    });
+                }
             }
         };
         reader.onerror = (error) => {

@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, type IpcMainInvokeEvent } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import readline from 'node:readline';
+import { randomUUID } from 'node:crypto';
 
 // ESM-safe __dirname replacement
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +35,9 @@ type PendingRequest = {
 const pendingResponses = new Map<string, PendingRequest[]>();
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
+const ICON_TARGET_SIZE = 160;
+
+let iconStorageDir: string | null = null;
 
 function createWindow() {
   win = new BrowserWindow({
@@ -216,9 +220,17 @@ app.on('activate', () => {
   }
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   startPythonBackend();
   createWindow();
+
+  try {
+    iconStorageDir = path.join(app.getPath('userData'), 'icons');
+    await fs.mkdir(iconStorageDir, { recursive: true });
+  } catch (error) {
+    console.error('Failed to prepare icon storage directory:', error);
+    iconStorageDir = null;
+  }
 
   // --- IPC Handlers ---
   ipcMain.handle('serial:get_ports', async () => {
@@ -257,6 +269,57 @@ app.whenReady().then(() => {
       console.error('Failed to send set_page to backend', error);
       throw error;
     }
+  });
+
+  ipcMain.handle('image:import_and_resize', async (_event, payload: { filePath?: string | null; dataUrl?: string | null }) => {
+    const sourcePath = typeof payload?.filePath === 'string' && payload.filePath.length > 0 ? payload.filePath : null;
+    const sourceDataUrl = typeof payload?.dataUrl === 'string' && payload.dataUrl.length > 0 ? payload.dataUrl : null;
+
+    if (!sourcePath && !sourceDataUrl) {
+      throw new Error('No image data provided for import.');
+    }
+
+    let image: Electron.NativeImage | null = null;
+
+    if (sourcePath) {
+      try {
+        const fileBuffer = await fs.readFile(sourcePath);
+        image = nativeImage.createFromBuffer(fileBuffer);
+      } catch (error) {
+        console.warn(`Failed to load image from file path (${sourcePath}):`, error);
+      }
+    }
+
+    if ((!image || image.isEmpty()) && sourceDataUrl) {
+      image = nativeImage.createFromDataURL(sourceDataUrl);
+    }
+
+    if (!image || image.isEmpty()) {
+      throw new Error('Failed to load source image.');
+    }
+
+    const resized = image.resize({ width: ICON_TARGET_SIZE, height: ICON_TARGET_SIZE, quality: 'best' });
+    if (resized.isEmpty()) {
+      throw new Error('Failed to resize image.');
+    }
+
+    const jpegBuffer = resized.toJPEG(90);
+    const targetDir = iconStorageDir ?? path.join(app.getPath('userData'), 'icons');
+
+    try {
+      await fs.mkdir(targetDir, { recursive: true });
+    } catch (error) {
+      console.warn('Failed to ensure icon storage directory exists:', error);
+    }
+
+    const fileName = `icon-${Date.now()}-${randomUUID()}.jpg`;
+    const storedPath = path.join(targetDir, fileName);
+
+    await fs.writeFile(storedPath, jpegBuffer);
+
+    const resizedDataUrl = `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`;
+
+    return { storedPath, dataUrl: resizedDataUrl };
   });
 
   ipcMain.handle('image:get_base64', async (_event: IpcMainInvokeEvent, filePath: string) => {
