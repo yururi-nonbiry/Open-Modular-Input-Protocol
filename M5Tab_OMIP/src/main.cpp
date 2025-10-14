@@ -122,7 +122,7 @@ SwipeState g_swipe_state;
 namespace {
 constexpr int32_t kCellMargin = 4;
 constexpr float kGridCellScale = 0.80f;
-constexpr int32_t kGridBorderThickness = 2;
+constexpr int32_t kGridBorderThickness = 5; // add one more inner stroke
 constexpr int32_t kGridBorderCornerRadius = 12;
 constexpr size_t kMaxCapabilityPorts = 22; // 18 grid + 1 analog + 2 swipe + 1 screen
 
@@ -348,7 +348,7 @@ static ScreenRegion compute_inner_grid_region(const ScreenRegion& region) {
         return inner;
     }
 
-    int32_t inset = kGridBorderThickness + 1;
+    int32_t inset = kGridBorderThickness;
     if (inner.w <= inset * 2 || inner.h <= inset * 2) {
         inner.w = 0;
         inner.h = 0;
