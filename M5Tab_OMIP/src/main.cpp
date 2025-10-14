@@ -114,6 +114,7 @@ struct SwipeState {
     bool active = false;
     int32_t start_x = 0;
     int32_t start_y = 0;
+    bool gesture_consumed = false;
 };
 
 SwipeState g_swipe_state;
@@ -675,7 +676,6 @@ void handle_touch() {
         if (port >= 0) {
             g_touch_context.grid_active = true;
             g_touch_context.active_port = port;
-            send_digital_input(port, true);
         } else if (point_in_sidebar(x, y)) {
             g_touch_context.sidebar_active = true;
             g_current_volume = compute_volume_from_y(y);
@@ -694,7 +694,9 @@ void handle_touch() {
     }
 
     if (released_now) {
-        if (g_touch_context.grid_active && g_touch_context.active_port >= 0) {
+        if (g_touch_context.grid_active && g_touch_context.active_port >= 0 && !g_swipe_state.gesture_consumed) {
+            // Send grid button activation on release to avoid triggering during swipes
+            send_digital_input(g_touch_context.active_port, true);
             send_digital_input(g_touch_context.active_port, false);
         }
         g_touch_context.grid_active = false;
@@ -710,6 +712,7 @@ void handle_gesture() {
 
     const auto& detail = M5.Touch.getDetail();
     if (detail.wasPressed()) {
+        g_swipe_state.gesture_consumed = false;
         if (detail.y >= g_layout.grid_origin_y && detail.x < g_layout.sidebar_x) {
             g_swipe_state.active = true;
             g_swipe_state.start_x = detail.x;
@@ -724,9 +727,11 @@ void handle_gesture() {
         int32_t abs_dy = dy >= 0 ? dy : -dy;
         if (abs_dx > 40 && abs_dx > abs_dy) {
             if (dx < 0) {
+                g_swipe_state.gesture_consumed = true;
                 send_digital_input(PORT_SWIPE_LEFT, true);
                 send_digital_input(PORT_SWIPE_LEFT, false);
             } else {
+                g_swipe_state.gesture_consumed = true;
                 send_digital_input(PORT_SWIPE_RIGHT, true);
                 send_digital_input(PORT_SWIPE_RIGHT, false);
             }
@@ -769,8 +774,8 @@ void setup() {
 
 void loop() {
   M5.update();
-  handle_touch();
   handle_gesture();
+  handle_touch();
 
   // Handle incoming serial data
   if (Serial.available() > 0) {
