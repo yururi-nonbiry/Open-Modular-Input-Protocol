@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <limits>
 #include <vector>
-#include <M5GFX.h>
 #include "omip.pb.h"
 #include "pb_decode.h"
 #include "pb_encode.h"
@@ -69,7 +68,6 @@ struct CellImageCache {
 
 static CellImageCache g_cell_cache[GRID_ROWS * GRID_COLS];
 static int32_t g_pressed_visual_cell = -1;
-static LGFX_Sprite g_cell_sprite(&M5.Display);
 
 constexpr uint8_t kAckReady = 0x06;  // ASCII ACK
 constexpr uint8_t kAckError = 0x15;  // ASCII NAK
@@ -383,15 +381,23 @@ static bool draw_cached_jpeg_scaled(const CellImageCache& cache, const ScreenReg
         return false;
     }
 
-    g_cell_sprite.deleteSprite();
-    if (g_cell_sprite.createSprite(target_region.w, target_region.h) == nullptr) {
-        return false;
-    }
-    g_cell_sprite.fillScreen(BLACK);
-    g_cell_sprite.drawJpg(cache.data.data(), cache.data.size(), 0, 0, target_region.w, target_region.h);
-    g_cell_sprite.pushSprite(target_region.x, target_region.y);
-    g_cell_sprite.deleteSprite();
-    return true;
+    bool ok = false;
+    M5.Display.startWrite();
+    M5.Display.setClipRect(target_region.x, target_region.y, target_region.w, target_region.h);
+    ok = M5.Display.drawJpg(
+        cache.data.data(),
+        cache.data.size(),
+        target_region.x,
+        target_region.y,
+        target_region.w,
+        target_region.h,
+        0,
+        0,
+        -1.0f,
+        -1.0f);
+    M5.Display.clearClipRect();
+    M5.Display.endWrite();
+    return ok;
 }
 
 static ScreenRegion compute_inner_grid_region(const ScreenRegion& region) {
@@ -931,7 +937,6 @@ void setup() {
   M5.Display.setRotation(3);
   M5.Display.setBrightness(g_brightness);
   M5.Speaker.setVolume(g_beepVolume);
-  g_cell_sprite.setPsram(true);
   draw_ui();
   Serial.begin(115200);
   setup_ble();
