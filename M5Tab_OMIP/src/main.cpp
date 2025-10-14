@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <vector>
+#include <M5GFX.h>
 #include "omip.pb.h"
 #include "pb_decode.h"
 #include "pb_encode.h"
@@ -58,6 +60,16 @@ struct ImageReconstruction {
     omip_FeedbackImage_ImageFormat format = omip_FeedbackImage_ImageFormat_JPEG;
 };
 ImageReconstruction g_image_recon;
+
+struct CellImageCache {
+    std::vector<uint8_t> data;
+    omip_FeedbackImage_ImageFormat format = omip_FeedbackImage_ImageFormat_JPEG;
+    bool has_data = false;
+};
+
+static CellImageCache g_cell_cache[GRID_ROWS * GRID_COLS];
+static int32_t g_pressed_visual_cell = -1;
+static LGFX_Sprite g_cell_sprite(&M5.Display);
 
 constexpr uint8_t kAckReady = 0x06;  // ASCII ACK
 constexpr uint8_t kAckError = 0x15;  // ASCII NAK
@@ -119,10 +131,17 @@ struct SwipeState {
 
 SwipeState g_swipe_state;
 
+struct ScreenRegion;
+
+static bool screen_id_to_cell_index(uint32_t screen_id, int32_t& cell_index);
+static void redraw_cell_from_cache(int32_t cell_index, bool pressed);
+static void set_cell_press_visual(int32_t cell_index, bool pressed);
+static bool draw_cached_jpeg_scaled(const CellImageCache& cache, const ScreenRegion& target_region);
+
 namespace {
 constexpr int32_t kCellMargin = 4;
 constexpr float kGridCellScale = 0.80f;
-constexpr int32_t kGridBorderThickness = 5; // add one more inner stroke
+constexpr int32_t kGridBorderThickness = 5; // number of border strokes (drawn inward)
 constexpr int32_t kGridBorderCornerRadius = 12;
 constexpr size_t kMaxCapabilityPorts = 22; // 18 grid + 1 analog + 2 swipe + 1 screen
 
@@ -341,6 +360,40 @@ bool resolve_image_region(uint32_t screen_id, ScreenRegion& region) {
     return false;
 }
 
+static bool screen_id_to_cell_index(uint32_t screen_id, int32_t& cell_index) {
+    if (screen_id < GRID_ROWS * GRID_COLS) {
+        cell_index = static_cast<int32_t>(screen_id);
+        return true;
+    }
+    if (screen_id >= SCREEN_ID_CELL_BASE) {
+        int32_t candidate = static_cast<int32_t>(screen_id - SCREEN_ID_CELL_BASE);
+        if (candidate >= 0 && candidate < GRID_ROWS * GRID_COLS) {
+            cell_index = candidate;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool draw_cached_jpeg_scaled(const CellImageCache& cache, const ScreenRegion& target_region) {
+    if (!cache.has_data || cache.data.empty() || cache.format != omip_FeedbackImage_ImageFormat_JPEG) {
+        return false;
+    }
+    if (target_region.w <= 0 || target_region.h <= 0) {
+        return false;
+    }
+
+    g_cell_sprite.deleteSprite();
+    if (g_cell_sprite.createSprite(target_region.w, target_region.h) == nullptr) {
+        return false;
+    }
+    g_cell_sprite.fillScreen(BLACK);
+    g_cell_sprite.drawJpg(cache.data.data(), cache.data.size(), 0, 0, target_region.w, target_region.h);
+    g_cell_sprite.pushSprite(target_region.x, target_region.y);
+    g_cell_sprite.deleteSprite();
+    return true;
+}
+
 static ScreenRegion compute_inner_grid_region(const ScreenRegion& region) {
     ScreenRegion inner = region;
     inner.is_grid_cell = false;
@@ -418,6 +471,78 @@ void draw_jpeg_in_region(const uint8_t* data, size_t len, const ScreenRegion& re
     }
 }
 
+static void redraw_cell_from_cache(int32_t cell_index, bool pressed) {
+    if (cell_index < 0 || cell_index >= GRID_ROWS * GRID_COLS) {
+        return;
+    }
+
+    ScreenRegion base_region;
+    if (!resolve_image_region(static_cast<uint32_t>(cell_index), base_region)) {
+        return;
+    }
+
+    ScreenRegion border_region = base_region;
+    if (pressed) {
+        int32_t border_inset = std::max<int32_t>(2, std::min(base_region.w, base_region.h) / 12);
+        int32_t max_inset = std::max<int32_t>(0, std::min(base_region.w, base_region.h) / 2 - 1);
+        border_inset = std::min<int32_t>(border_inset, max_inset);
+        if (border_inset > 0 && border_region.w > border_inset * 2 && border_region.h > border_inset * 2) {
+            border_region.x += border_inset;
+            border_region.y += border_inset;
+            border_region.w -= border_inset * 2;
+            border_region.h -= border_inset * 2;
+        }
+    }
+
+    ScreenRegion content_region = compute_inner_grid_region(border_region);
+    const CellImageCache& cache = g_cell_cache[cell_index];
+    bool has_image = cache.has_data && !cache.data.empty() && cache.format == omip_FeedbackImage_ImageFormat_JPEG;
+
+    // Clear original drawing area (including previous border) before redrawing.
+    M5.Display.fillRect(base_region.x, base_region.y, base_region.w, base_region.h, BLACK);
+    draw_grid_cell_border(border_region);
+
+    if (!has_image) {
+        return;
+    }
+
+    ScreenRegion target_region = content_region;
+    if (!draw_cached_jpeg_scaled(cache, target_region)) {
+        ScreenRegion draw_region = target_region;
+        draw_region.is_grid_cell = false;
+        draw_jpeg_in_region(cache.data.data(), cache.data.size(), draw_region, true);
+    }
+}
+
+static void set_cell_press_visual(int32_t cell_index, bool pressed) {
+    if (pressed) {
+        if (g_pressed_visual_cell == cell_index) {
+            return;
+        }
+        if (g_pressed_visual_cell >= 0) {
+            redraw_cell_from_cache(g_pressed_visual_cell, false);
+        }
+        if (cell_index >= 0) {
+            redraw_cell_from_cache(cell_index, true);
+            g_pressed_visual_cell = cell_index;
+        } else {
+            g_pressed_visual_cell = -1;
+        }
+    } else {
+        if (cell_index < 0) {
+            if (g_pressed_visual_cell >= 0) {
+                redraw_cell_from_cache(g_pressed_visual_cell, false);
+                g_pressed_visual_cell = -1;
+            }
+            return;
+        }
+        if (g_pressed_visual_cell == cell_index) {
+            redraw_cell_from_cache(cell_index, false);
+            g_pressed_visual_cell = -1;
+        }
+    }
+}
+
 void handle_feedback_image(const omip_FeedbackImage& img) {
     bool success = true;
 
@@ -430,6 +555,14 @@ void handle_feedback_image(const omip_FeedbackImage& img) {
                 if (has_region) {
                     M5.Display.fillRect(region.x, region.y, region.w, region.h, BLACK);
                     draw_grid_cell_border(region);
+                    int32_t cell_index;
+                    if (screen_id_to_cell_index(img.screen_id, cell_index)) {
+                        g_cell_cache[cell_index].data.clear();
+                        g_cell_cache[cell_index].has_data = false;
+                        if (g_pressed_visual_cell == cell_index) {
+                            g_pressed_visual_cell = -1;
+                        }
+                    }
                 } else {
                     M5.Display.fillScreen(BLACK);
                     draw_header();
@@ -473,6 +606,16 @@ void handle_feedback_image(const omip_FeedbackImage& img) {
                 ScreenRegion region;
                 bool clip = resolve_image_region(g_image_recon.screen_id, region);
                 draw_jpeg_in_region(g_image_recon.buffer, g_image_recon.total_size, region, clip);
+                int32_t cell_index;
+                if (screen_id_to_cell_index(g_image_recon.screen_id, cell_index)) {
+                    CellImageCache& cache = g_cell_cache[cell_index];
+                    cache.data.assign(g_image_recon.buffer, g_image_recon.buffer + g_image_recon.total_size);
+                    cache.format = g_image_recon.format;
+                    cache.has_data = true;
+                    if (g_pressed_visual_cell == cell_index) {
+                        redraw_cell_from_cache(cell_index, true);
+                    }
+                }
             } else if (!bytes_complete) {
                 success = false;
             }
@@ -645,12 +788,14 @@ void handle_touch() {
             M5.Speaker.setVolume(g_beepVolume);
             M5.Speaker.tone(1000, 50); // Play a short beep to confirm
             draw_header(); // Redraw header to show new volume
+            set_cell_press_visual(-1, false);
             return; 
         } else if (point_in_button(x, y, g_layout.beep_vol_down_btn)) {
             g_beepVolume = std::max(0, g_beepVolume - 16);
             M5.Speaker.setVolume(g_beepVolume);
             M5.Speaker.tone(800, 50); // Play a short beep to confirm
             draw_header(); // Redraw header to show new volume
+            set_cell_press_visual(-1, false);
             return;
         }
 
@@ -658,10 +803,12 @@ void handle_touch() {
         if (point_in_button(x, y, g_layout.brightness_up_btn)) {
             g_brightness = std::min(255, g_brightness + 32);
             M5.Display.setBrightness(g_brightness);
+            set_cell_press_visual(-1, false);
             return; // Header button handled
         } else if (point_in_button(x, y, g_layout.brightness_down_btn)) {
             g_brightness = std::max(0, g_brightness - 32);
             M5.Display.setBrightness(g_brightness);
+            set_cell_press_visual(-1, false);
             return; // Header button handled
         }
     }
@@ -676,12 +823,16 @@ void handle_touch() {
         if (port >= 0) {
             g_touch_context.grid_active = true;
             g_touch_context.active_port = port;
+            set_cell_press_visual(port, true);
         } else if (point_in_sidebar(x, y)) {
             g_touch_context.sidebar_active = true;
             g_current_volume = compute_volume_from_y(y);
             g_touch_context.last_volume_sent = g_current_volume;
             send_analog_input(PORT_ANALOG_VOLUME, g_current_volume);
             draw_sidebar(g_current_volume);
+            set_cell_press_visual(-1, false);
+        } else {
+            set_cell_press_visual(-1, false);
         }
     } else if (g_touch_context.sidebar_active && pressed_now) {
         float new_volume = compute_volume_from_y(y);
@@ -691,6 +842,18 @@ void handle_touch() {
             send_analog_input(PORT_ANALOG_VOLUME, g_current_volume);
             draw_sidebar(g_current_volume);
         }
+    } else if (g_touch_context.grid_active && pressed_now) {
+        int32_t port = point_to_grid_port(x, y);
+        if (port != g_touch_context.active_port) {
+            set_cell_press_visual(g_touch_context.active_port, false);
+            if (port >= 0) {
+                g_touch_context.active_port = port;
+                set_cell_press_visual(port, true);
+            } else {
+                g_touch_context.grid_active = false;
+                g_touch_context.active_port = -1;
+            }
+        }
     }
 
     if (released_now) {
@@ -699,6 +862,7 @@ void handle_touch() {
             send_digital_input(g_touch_context.active_port, true);
             send_digital_input(g_touch_context.active_port, false);
         }
+        set_cell_press_visual(g_touch_context.active_port, false);
         g_touch_context.grid_active = false;
         g_touch_context.sidebar_active = false;
         g_touch_context.active_port = -1;
@@ -767,6 +931,7 @@ void setup() {
   M5.Display.setRotation(3);
   M5.Display.setBrightness(g_brightness);
   M5.Speaker.setVolume(g_beepVolume);
+  g_cell_sprite.setPsram(true);
   draw_ui();
   Serial.begin(115200);
   setup_ble();
