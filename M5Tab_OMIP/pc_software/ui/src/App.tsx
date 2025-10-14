@@ -270,6 +270,35 @@ const syncPageIcons = useCallback(
     }
   };
 
+  const handleIconClear = (index: number) => {
+    const currentPage = page;
+    const newConfigs = JSON.parse(JSON.stringify(pageConfigs)); // Deep copy
+    if (!Array.isArray(newConfigs[currentPage])) {
+      newConfigs[currentPage] = Array.from({ length: 18 }, () => ({ icon: null, action: '' }));
+    }
+    if (!newConfigs[currentPage][index]) {
+      newConfigs[currentPage][index] = { icon: null, action: '' };
+    }
+    newConfigs[currentPage][index].icon = null;
+
+    const sanitizedConfigs = sanitizePageConfigs(newConfigs);
+    setPageConfigs(sanitizedConfigs);
+    if (hasIpc) {
+      window.ipcRenderer!.invoke('config:save', sanitizedConfigs);
+      if (isConnected) {
+        const cell = sanitizedConfigs[currentPage]?.[index] ?? { icon: null, action: '' };
+        const payload = createUploadPayload(index, cell, currentPage);
+        if (payload) {
+          window.ipcRenderer!
+            .invoke('image:upload', payload)
+            .catch((err: Error) => {
+              console.error('Failed to clear icon on device:', err);
+            });
+        }
+      }
+    }
+  };
+
   const handleCellClick = (index: number) => {
     setEditingCell({ page, index });
     setEditingAction(pageConfigs[page]?.[index]?.action || '');
@@ -351,12 +380,13 @@ const syncPageIcons = useCallback(
       <Grid container spacing={2}>
         {currentGridConfig.map((cell, index) => (
           <Grid key={index} size={2}>
-              <GridCell 
-              config={cell}
-              isFlashing={flashingCell === index}
-              onClick={() => handleCellClick(index)}
-              onIconDrop={(icon) => handleIconDrop(index, icon)}
-                />
+              <GridCell
+                config={cell}
+                isFlashing={flashingCell === index}
+                onClick={() => handleCellClick(index)}
+                onIconDrop={(icon) => handleIconDrop(index, icon)}
+                onIconClear={() => handleIconClear(index)}
+              />
               </Grid>
             ))}
           </Grid>

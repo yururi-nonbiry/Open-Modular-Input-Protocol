@@ -1,6 +1,8 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, IconButton, Paper, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
+import type { DragEvent as ReactDragEvent } from "react";
 import { useDropzone } from "react-dropzone";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 
 interface CellConfig {
     icon: string | null;
@@ -47,9 +49,10 @@ interface GridCellProps {
     isFlashing: boolean;
     onClick: () => void;
     onIconDrop: (payload: DroppedIconPayload) => void;
+    onIconClear: () => void;
 }
 
-export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellProps) {
+export function GridCell({ config, isFlashing, onClick, onIconDrop, onIconClear }: GridCellProps) {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
 
     const handleFileDrop = useCallback((file: File) => {
@@ -161,11 +164,14 @@ export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellPr
             });
     }, [config.icon]);
 
+    const hasIcon = Boolean(config.icon);
+
     return (
         <Paper
             {...getRootProps()}
             elevation={isFlashing ? 8 : 2}
             sx={{
+                position: 'relative',
                 height: 120,
                 display: 'flex',
                 flexDirection: 'column',
@@ -182,6 +188,38 @@ export function GridCell({ config, isFlashing, onClick, onIconDrop }: GridCellPr
             }}
         >
             <input {...getInputProps()} />
+            <IconButton
+                size="small"
+                aria-label="Clear icon"
+                onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setImageUrl(null);
+                    onIconClear();
+                }}
+                onDragOver={(event: ReactDragEvent<HTMLButtonElement>) => {
+                    event.preventDefault();
+                }}
+                onDrop={(event: ReactDragEvent<HTMLButtonElement>) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const file = event.dataTransfer?.files?.[0];
+                    if (file) {
+                        handleFileDrop(file);
+                    }
+                }}
+                sx={{
+                    position: 'absolute',
+                    top: 4,
+                    right: 4,
+                    visibility: hasIcon ? 'visible' : 'hidden',
+                    opacity: hasIcon ? 0.9 : 0,
+                    backgroundColor: 'background.paper',
+                    '&:hover': { backgroundColor: 'error.light', color: 'error.dark' },
+                }}
+            >
+                <DeleteForeverIcon fontSize="small" />
+            </IconButton>
             {/* We need a wrapper Box for the onClick to work separately from the dropzone's root props */}
             <Box onClick={onClick} sx={{width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-around'}}>
                 <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
