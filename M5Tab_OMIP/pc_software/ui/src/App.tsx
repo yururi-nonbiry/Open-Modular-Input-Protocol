@@ -139,6 +139,48 @@ const syncPageIcons = useCallback(
     });
   };
 
+  const handlePageChange = useCallback(
+    (target: number | ((prev: number) => number)) => {
+      setPage((previousPage) => {
+        const desiredPage = typeof target === 'function' ? target(previousPage) : target;
+        const clampedPage = Math.max(1, Math.min(totalPages, desiredPage));
+        if (
+          clampedPage !== previousPage &&
+          hasIpc &&
+          typeof window !== 'undefined' &&
+          window.ipcRenderer
+        ) {
+          void window.ipcRenderer.invoke('config:set_page', clampedPage);
+        }
+        return clampedPage;
+      });
+    },
+    [hasIpc, totalPages]
+  );
+
+  const handlePrevPage = useCallback(() => handlePageChange((prev) => prev - 1), [handlePageChange]);
+  const handleNextPage = useCallback(() => handlePageChange((prev) => prev + 1), [handlePageChange]);
+
+  const lastPageNavTimeRef = useRef<{ next: number; prev: number }>({ next: 0, prev: 0 });
+
+  const throttledPrevPage = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPageNavTimeRef.current.prev < 250) {
+      return;
+    }
+    lastPageNavTimeRef.current.prev = now;
+    handlePrevPage();
+  }, [handlePrevPage]);
+
+  const throttledNextPage = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPageNavTimeRef.current.next < 250) {
+      return;
+    }
+    lastPageNavTimeRef.current.next = now;
+    handleNextPage();
+  }, [handleNextPage]);
+
   // Initial data fetch
   useEffect(() => {
     fetchPorts();
@@ -173,8 +215,8 @@ const syncPageIcons = useCallback(
               setFlashingCell(portId);
               setTimeout(() => setFlashingCell(null), 200);
             }
-            if (portId === 19) { handleNextPage(); }
-            else if (portId === 20) { handlePrevPage(); }
+            if (portId === 19) { throttledNextPage(); }
+            else if (portId === 20) { throttledPrevPage(); }
           } else if (response.event === 'input_analog') {
             // PC Volume is handled by the main process, no UI update needed here.
           }
@@ -187,7 +229,7 @@ const syncPageIcons = useCallback(
     return () => {
       window.ipcRenderer!.off('from-backend', handleBackendEvent);
     };
-  }, [hasIpc]);
+  }, [hasIpc, throttledNextPage, throttledPrevPage]);
 
   useEffect(() => {
     if (!isConnected) {
@@ -224,16 +266,6 @@ const syncPageIcons = useCallback(
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    const clampedPage = Math.max(1, Math.min(totalPages, newPage));
-    setPage(clampedPage);
-    if (hasIpc) {
-      window.ipcRenderer!.invoke('config:set_page', clampedPage);
-    }
-  };
-
-  const handlePrevPage = () => handlePageChange(page - 1);
-  const handleNextPage = () => handlePageChange(page + 1);
 
   const handleIconDrop = (index: number, payload: DroppedIconPayload) => {
     const { dataUrl, filePath } = payload;
