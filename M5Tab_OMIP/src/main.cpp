@@ -135,6 +135,7 @@ static bool screen_id_to_cell_index(uint32_t screen_id, int32_t& cell_index);
 static void redraw_cell_from_cache(int32_t cell_index, bool pressed);
 static void set_cell_press_visual(int32_t cell_index, bool pressed);
 static bool draw_cached_jpeg_scaled(const CellImageCache& cache, const ScreenRegion& target_region);
+static bool draw_jpeg_scaled(const uint8_t* data, size_t len, const ScreenRegion& target_region);
 
 namespace {
 constexpr int32_t kCellMargin = 4;
@@ -381,12 +382,23 @@ static bool draw_cached_jpeg_scaled(const CellImageCache& cache, const ScreenReg
         return false;
     }
 
-    bool ok = false;
+    return draw_jpeg_scaled(cache.data.data(), cache.data.size(), target_region);
+}
+
+static bool draw_jpeg_scaled(const uint8_t* data, size_t len, const ScreenRegion& target_region) {
+    if (data == nullptr || len == 0) {
+        return false;
+    }
+    if (target_region.w <= 0 || target_region.h <= 0) {
+        return false;
+    }
+
+    bool ok;
     M5.Display.startWrite();
     M5.Display.setClipRect(target_region.x, target_region.y, target_region.w, target_region.h);
     ok = M5.Display.drawJpg(
-        cache.data.data(),
-        cache.data.size(),
+        data,
+        len,
         target_region.x,
         target_region.y,
         target_region.w,
@@ -463,17 +475,16 @@ void draw_jpeg_in_region(const uint8_t* data, size_t len, const ScreenRegion& re
         return;
     }
 
-    bool apply_clip = clip_to_region && target_region.w > 0 && target_region.h > 0;
-    if (apply_clip) {
-        M5.Display.startWrite();
-        M5.Display.setClipRect(target_region.x, target_region.y, target_region.w, target_region.h);
-    }
-
-    M5.Display.drawJpg(data, len, target_region.x, target_region.y, target_region.w, target_region.h);
-
-    if (apply_clip) {
-        M5.Display.clearClipRect();
-        M5.Display.endWrite();
+    if (!draw_jpeg_scaled(data, len, target_region)) {
+        if (clip_to_region) {
+            M5.Display.startWrite();
+            M5.Display.setClipRect(target_region.x, target_region.y, target_region.w, target_region.h);
+            M5.Display.drawJpg(data, len, target_region.x, target_region.y, target_region.w, target_region.h);
+            M5.Display.clearClipRect();
+            M5.Display.endWrite();
+        } else {
+            M5.Display.drawJpg(data, len, target_region.x, target_region.y, target_region.w, target_region.h);
+        }
     }
 }
 
