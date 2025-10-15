@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from "./contexts/ThemeContext";
 import './ThemeSettings.css';
 
 const ThemeSettings: React.FC = () => {

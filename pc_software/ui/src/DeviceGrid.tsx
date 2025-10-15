@@ -1,5 +1,5 @@
 import React from 'react';
-import { PageSettings } from './contexts/DeviceSettingsContext';
+import type { PageSettings } from './contexts/DeviceSettingsContext';
 
 interface DeviceData {
   type: 'digital' | 'analog' | 'encoder';

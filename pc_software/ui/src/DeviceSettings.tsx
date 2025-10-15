@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useDeviceSettings, Profile } from '../contexts/DeviceSettingsContext';
+import { useDeviceSettings, type Profile } from "./contexts/DeviceSettingsContext";
 import './DeviceSettings.css';
 import { Socket } from 'socket.io-client';
 
