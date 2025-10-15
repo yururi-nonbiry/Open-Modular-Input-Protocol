@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PageSettings } from './contexts/DeviceSettingsContext';
 
 interface DeviceData {
@@ -16,6 +17,8 @@ interface DeviceGridProps {
 }
 
 const DeviceCard: React.FC<{ device: DeviceData; deviceKey: string; alias?: string }> = ({ device, deviceKey, alias }) => {
+  const { t } = useTranslation();
+
   const renderValue = () => {
     switch (device.type) {
       case 'digital':
@@ -34,7 +37,7 @@ const DeviceCard: React.FC<{ device: DeviceData; deviceKey: string; alias?: stri
     }
   };
 
-  const headerText = alias || `Device: ${device.device_id} - Port: ${device.port_id}`;
+  const headerText = alias || `${t('deviceHeader')}: ${device.device_id} - ${t('portHeader')}: ${device.port_id}`;
   const cardClassName = `device-card ${device.type === 'digital' && device.state ? 'active' : ''}`;
 
   return (
@@ -50,6 +53,7 @@ const DeviceCard: React.FC<{ device: DeviceData; deviceKey: string; alias?: stri
 };
 
 const DeviceGrid: React.FC<DeviceGridProps> = ({ devices, deviceSettings }) => {
+  const { t } = useTranslation();
 
   const visibleDeviceKeys = Object.keys(devices)
     .filter(key => (deviceSettings[key] ? deviceSettings[key].isVisible : true))
@@ -60,7 +64,7 @@ const DeviceGrid: React.FC<DeviceGridProps> = ({ devices, deviceSettings }) => {
     });
 
   if (visibleDeviceKeys.length === 0) {
-    return <p>Waiting for data from a device, or all devices are hidden in settings.</p>;
+    return <p>{t('waitingForData')}</p>;
   }
 
   return (

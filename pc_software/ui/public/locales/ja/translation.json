@@ -1,0 +1,43 @@
+{
+  "settings": "設定",
+  "theme": "テーマ",
+  "device": "デバイス",
+  "connection": "接続",
+  "language": "言語",
+
+  "themeSettings": "テーマ設定",
+  "themeLabel": "テーマ",
+  "lightTheme": "ライト",
+  "darkTheme": "ダーク",
+
+  "deviceSettings": "デバイス設定",
+  "profiles": "プロファイル",
+  "noProfiles": "プロファイルが定義されていません。",
+  "addProfile": "プロファイルを追加",
+  "deleteProfile": "プロファイルを削除",
+  "appName": "アプリケーション名",
+  "profileName": "プロファイル名",
+  "save": "保存",
+  "gridSettings": "グリッド設定",
+  "alias": "別名",
+  "visible": "表示",
+  "shortcut": "ショートカット",
+
+  "connectionSettings": "接続設定",
+  "connectionType": "接続タイプ",
+  "serial": "シリアル",
+
+  "serialPortSettings": "シリアルポート設定",
+  "availablePorts": "利用可能なポート",
+  "noPortsFound": "シリアルポートが見つかりません。",
+  "refresh": "更新",
+  "connect": "接続",
+  "disconnect": "切断",
+  "connectedTo": "{{port}}に接続中",
+  "notConnected": "未接続",
+
+  "deviceGrid": "デバイスグリッド",
+  "waitingForData": "デバイスからのデータを待っています、またはすべてのデバイスが設定で非表示にされています。",
+  "deviceHeader": "デバイス",
+  "portHeader": "ポート"
+}

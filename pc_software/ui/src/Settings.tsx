@@ -1,63 +1,28 @@
 import React, { useState } from 'react';
-import { Socket } from 'socket.io-client';
-import ConnectionSettings from './ConnectionSettings';
+import { useTranslation } from 'react-i18next';
 import ThemeSettings from './ThemeSettings';
 import DeviceSettings from './DeviceSettings';
+import ConnectionSettings from './ConnectionSettings';
+import LanguageSettings from './LanguageSettings'; // Import LanguageSettings
 
-// Define the structure of the data received from the backend
-interface DeviceData {
-    type: 'digital' | 'analog' | 'encoder';
-    device_id: number;
-    port_id: number;
-    state?: boolean;
-    value?: number;
-    steps?: number;
-}
-
-interface BleDevice {
-    name: string;
-    address: string;
-}
-
-interface SettingsProps {
-  socket: Socket;
-  activeDevices: { [key: string]: DeviceData };
-  bleDevices: BleDevice[];
-  currentPage: number;
-  setCurrentPage: (page: number) => void;
-}
-
-type Tab = 'connection' | 'appearance' | 'devices';
-
-const Settings: React.FC<SettingsProps> = ({ socket, activeDevices, bleDevices, currentPage, setCurrentPage }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('connection');
+const Settings: React.FC = () => {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState('theme');
 
   return (
-    <div className="card settings-card">
-      <div className="settings-tabs">
-        <button 
-          className={`tab-button ${activeTab === 'connection' ? 'active' : ''}`}
-          onClick={() => setActiveTab('connection')}
-        >
-          Connection
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'appearance' ? 'active' : ''}`}
-          onClick={() => setActiveTab('appearance')}
-        >
-          Appearance
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'devices' ? 'active' : ''}`}
-          onClick={() => setActiveTab('devices')}
-        >
-          Devices
-        </button>
+    <div className="settings-container">
+      <h2>{t('settings')}</h2>
+      <div className="settings-nav">
+        <button onClick={() => setActiveTab('theme')} className={activeTab === 'theme' ? 'active' : ''}>{t('theme')}</button>
+        <button onClick={() => setActiveTab('device')} className={activeTab === 'device' ? 'active' : ''}>{t('device')}</button>
+        <button onClick={() => setActiveTab('connection')} className={activeTab === 'connection' ? 'active' : ''}>{t('connection')}</button>
+        <button onClick={() => setActiveTab('language')} className={activeTab === 'language' ? 'active' : ''}>{t('language')}</button> {/* Add Language Tab */}
       </div>
       <div className="settings-content">
-        {activeTab === 'connection' && <ConnectionSettings socket={socket} bleDevices={bleDevices} />}
-        {activeTab === 'appearance' && <ThemeSettings />}
-        {activeTab === 'devices' && <DeviceSettings activeDevices={activeDevices} socket={socket} currentPage={currentPage} setCurrentPage={setCurrentPage} />}
+        {activeTab === 'theme' && <ThemeSettings />}
+        {activeTab === 'device' && <DeviceSettings />}
+        {activeTab === 'connection' && <ConnectionSettings />}
+        {activeTab === 'language' && <LanguageSettings />} {/* Add LanguageSettings Component */}
       </div>
     </div>
   );

@@ -1,122 +1,81 @@
-import React, { useState, useEffect } from 'react';
-import { Socket } from 'socket.io-client';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { socket } from './socket';
 
-interface Port {
-  device: string;
-  description: string;
-}
-
-interface SerialSettingsProps {
-  socket: Socket;
-}
-
-const PortSelector: React.FC<{
-  ports: Port[];
-  selectedPort: string;
-  onPortChange: (port: string) => void;
-  onRefresh: () => void;
-}> = ({ ports, selectedPort, onPortChange, onRefresh }) => (
-  <div className="form-group">
-    <label htmlFor="port-select">Available Ports:</label>
-    <div className="port-selector-row">
-      <select id="port-select" value={selectedPort} onChange={(e) => onPortChange(e.target.value)} disabled={ports.length === 0}>
-        {ports.length > 0 ? (
-          ports.map((port) => (
-            <option key={port.device} value={port.device}>
-              {port.device} - {port.description}
-            </option>
-          ))
-        ) : (
-          <option value="" disabled>No ports found</option>
-        )}
-      </select>
-      <button onClick={onRefresh} className="button-outline">Refresh</button>
-    </div>
-  </div>
-);
-
-const ConnectionManager: React.FC<{
-  selectedPort: string;
-  status: string;
-  onConnect: () => void;
-}> = ({ selectedPort, status, onConnect }) => {
-    const getStatusClass = () => {
-        if (status.startsWith('Connected')) return 'status-connected';
-        if (status.startsWith('Error')) return 'status-error';
-        return 'status-disconnected';
-    };
-
-    return (
-        <>
-            <button onClick={onConnect} disabled={!selectedPort} className="button-primary">Connect</button>
-            <div className={`status ${getStatusClass()}`}>
-                <p><strong>Status:</strong> {status}</p>
-            </div>
-        </>
-    );
-};
-
-const SerialSettings: React.FC<SerialSettingsProps> = ({ socket }) => {
-  const [ports, setPorts] = useState<Port[]>([]);
+const SerialSettings = () => {
+  const { t } = useTranslation();
+  const [ports, setPorts] = useState<string[]>([]);
   const [selectedPort, setSelectedPort] = useState<string>('');
-  const [status, setStatus] = useState('Awaiting selection...');
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [connectedPort, setConnectedPort] = useState<string>('');
+
+  const refreshPorts = useCallback(() => {
+    socket.emit('list-serial-ports');
+  }, []);
 
   useEffect(() => {
-    // Request the port list on component mount
-    socket.emit('get_serial_ports');
+    refreshPorts();
 
-    const handleSerialPorts = (portList: Port[]) => {
+    socket.on('serial-ports-list', (portList) => {
       setPorts(portList);
       if (portList.length > 0 && !selectedPort) {
-        setSelectedPort(portList[0].device);
+        setSelectedPort(portList[0]);
       }
-    };
+    });
 
-    const handleConnectionStatus = (data: { status: string; port?: string; message?: string }) => {
-        if (data.status === 'connected') {
-            setStatus(`Connected to ${data.port}`);
-        } else if (data.status === 'disconnected') {
-            setStatus('Disconnected');
-        } else if (data.status === 'error') {
-            setStatus(`Error: ${data.message}`);
-        }
-    };
+    socket.on('serial-connection-status', ({ status, port }) => {
+      setIsConnected(status);
+      setConnectedPort(port || '');
+    });
 
-    socket.on('serial_ports', handleSerialPorts);
-    socket.on('connection_status', handleConnectionStatus);
+    // Check initial status on component mount
+    socket.emit('get-serial-connection-status');
 
     return () => {
-      socket.off('serial_ports', handleSerialPorts);
-      socket.off('connection_status', handleConnectionStatus);
+      socket.off('serial-ports-list');
+      socket.off('serial-connection-status');
     };
-  }, [socket, selectedPort]);
-
-  const handleRefresh = () => {
-    socket.emit('get_serial_ports');
-  };
+  }, [refreshPorts, selectedPort]);
 
   const handleConnect = () => {
     if (selectedPort) {
-      setStatus(`Connecting to ${selectedPort}...`);
-      socket.emit('select_serial_port', selectedPort);
+      socket.emit('connect-serial', { port: selectedPort });
     }
   };
 
+  const handleDisconnect = () => {
+    socket.emit('disconnect-serial');
+  };
+
   return (
-    <>
-      <h2>Serial Port Settings</h2>
-      <PortSelector
-        ports={ports}
-        selectedPort={selectedPort}
-        onPortChange={setSelectedPort}
-        onRefresh={handleRefresh}
-      />
-      <ConnectionManager
-        selectedPort={selectedPort}
-        status={status}
-        onConnect={handleConnect}
-      />
-    </>
+    <div className="settings-subsection">
+      <h4>{t('serialPortSettings')}</h4>
+      <div className="setting-item">
+        <label htmlFor="serial-port-select">{t('availablePorts')}:</label>
+        <div className="port-selection">
+          <select 
+            id="serial-port-select" 
+            value={selectedPort} 
+            onChange={(e) => setSelectedPort(e.target.value)}
+            disabled={isConnected}
+          >
+            {ports.length > 0 ? (
+              ports.map(port => <option key={port} value={port}>{port}</option>)
+            ) : (
+              <option value="">{t('noPortsFound')}</option>
+            )}
+          </select>
+          <button onClick={refreshPorts} disabled={isConnected}>{t('refresh')}</button>
+        </div>
+      </div>
+      <div className="setting-item">
+        <button onClick={handleConnect} disabled={!selectedPort || isConnected}>{t('connect')}</button>
+        <button onClick={handleDisconnect} disabled={!isConnected}>{t('disconnect')}</button>
+        <span className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+          {isConnected ? t('connectedTo', { port: connectedPort }) : t('notConnected')}
+        </span>
+      </div>
+    </div>
   );
 };
 

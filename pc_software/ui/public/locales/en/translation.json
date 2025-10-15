@@ -1,0 +1,43 @@
+{
+  "settings": "Settings",
+  "theme": "Theme",
+  "device": "Device",
+  "connection": "Connection",
+  "language": "Language",
+
+  "themeSettings": "Theme Settings",
+  "themeLabel": "Theme",
+  "lightTheme": "Light",
+  "darkTheme": "Dark",
+
+  "deviceSettings": "Device Settings",
+  "profiles": "Profiles",
+  "noProfiles": "No profiles defined.",
+  "addProfile": "Add Profile",
+  "deleteProfile": "Delete Profile",
+  "appName": "Application Name",
+  "profileName": "Profile Name",
+  "save": "Save",
+  "gridSettings": "Grid Settings",
+  "alias": "Alias",
+  "visible": "Visible",
+  "shortcut": "Shortcut",
+
+  "connectionSettings": "Connection Settings",
+  "connectionType": "Connection Type",
+  "serial": "Serial",
+
+  "serialPortSettings": "Serial Port Settings",
+  "availablePorts": "Available Ports",
+  "noPortsFound": "No serial ports found.",
+  "refresh": "Refresh",
+  "connect": "Connect",
+  "disconnect": "Disconnect",
+  "connectedTo": "Connected to {{port}}",
+  "notConnected": "Not connected",
+
+  "deviceGrid": "Device Grid",
+  "waitingForData": "Waiting for data from a device, or all devices are hidden in settings.",
+  "deviceHeader": "Device",
+  "portHeader": "Port"
+}

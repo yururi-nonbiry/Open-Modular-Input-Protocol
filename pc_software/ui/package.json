@@ -15,8 +15,11 @@
   },
   "dependencies": {
     "active-win": "^8.2.1",
+    "i18next": "^25.6.0",
+    "i18next-http-backend": "^3.0.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-i18next": "^16.0.1",
     "robotjs": "^0.6.0",
     "socket.io-client": "^4.8.1",
     "uuid": "^13.0.0"
