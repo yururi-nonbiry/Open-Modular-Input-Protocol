@@ -63,7 +63,7 @@ function createWindow() {
     win = new BrowserWindow({
         width: 800,
         height: 600,
-        show: false, // Hide the window initially
+        show: true, // Hide the window initially
         webPreferences: {
             preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
@@ -72,7 +72,8 @@ function createWindow() {
     });
 
     // In development, load from the Vite dev server. In production, load the built file.
-    const startUrl = process.env.ELECTRON_START_URL || `file://${path.join(__dirname, '../build/index.html')}`;
+    const isDev = !app.isPackaged;
+    const startUrl = isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../build/index.html')}`;
     
     // Wait for the Python server to start before loading the URL
     setTimeout(() => {
