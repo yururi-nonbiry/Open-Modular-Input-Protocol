@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 // Expose a safe, world-isolated API to the renderer process
-contextBridge.exposeInMainWorld('api', {
+contextBridge.exposeInMainWorld('electron', {
   /**
    * Sends a request to the main process to execute a keyboard shortcut.
    * @param {string} shortcut - The shortcut to execute (e.g., 'control+c').
@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('api', {
    * Registers a listener for when the active window changes.
    * @param {function(string): void} callback - The function to call with the new app name.
    */
-  onActiveWindowChanged: (callback) => {
+  onActiveWindowChange: (callback) => {
     ipcRenderer.on('active-window-changed', (event, appName) => {
         callback(appName);
     });

@@ -6,3 +6,4 @@ uvicorn[standard]
 python-socketio
 Jinja2
 bleak
+hidapi
