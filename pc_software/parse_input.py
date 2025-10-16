@@ -8,6 +8,21 @@ NINTENDO_VID = 0x057e
 JOYCON_L_PID = 0x2006
 JOYCON_R_PID = 0x2007
 
+# --- Button Mapping Definitions ---
+# Based on HID report 0x3f
+
+# For Joy-Con (L)
+# Byte 2 (index 1)
+BYTE1_MAPPING = {
+    0x01: "左 (Left)",
+    0x02: "下 (Down)",
+    0x04: "上 (Up)",
+    0x08: "右 (Right)",
+    0x10: "SL",
+    0x20: "SR",
+}
+
+# Byte 3 (index 2)
 BYTE2_MAPPING = {
     0x01: "マイナス (-)",
     0x04: "スティック押し込み (L)",
@@ -35,6 +50,34 @@ BYTE2_MAPPING_R = {
     0x40: "R",
     0x80: "ZR",
 }
+
+# For both Joy-Cons
+# Byte 4 (index 3) for Analog Stick Direction
+STICK_DIRECTION_MAPPING = {
+    0: "右",
+    1: "右下",
+    2: "下",
+    3: "左下",
+    4: "左",
+    5: "左上",
+    6: "上",
+    7: "右上",
+    8: "ニュートラル",
+}
+
+# For Right Joy-Con Stick (180 degrees rotated)
+STICK_DIRECTION_MAPPING_R = {
+    0: "左",
+    1: "左上",
+    2: "上",
+    3: "右上",
+    4: "右",
+    5: "右下",
+    6: "下",
+    7: "左下",
+    8: "ニュートラル",
+}
+# --- End of Definitions ---
 
 def find_joycons():
     """Finds all connected Joy-Cons (L and R)."""
@@ -120,15 +163,19 @@ def main():
 
                     device_states[dev_path]['last_button_state'] = current_button_state
 
-                    # --- Analog Stick Direction (L-Con only for now) ---
+                    # --- Analog Stick Direction ---
+                    stick_byte = byte_3
+                    
                     if dev_type == 'L':
-                        stick_byte = byte_3
                         direction_name = STICK_DIRECTION_MAPPING.get(stick_byte, "ニュートラル")
-                        last_stick_direction = device_states[dev_path]['last_stick_direction']
+                    else: # dev_type == 'R'
+                        direction_name = STICK_DIRECTION_MAPPING_R.get(stick_byte, "ニュートラル")
 
-                        if last_stick_direction != direction_name:
-                            print(f"スティック ({dev_type}): {direction_name}")
-                            device_states[dev_path]['last_stick_direction'] = direction_name
+                    last_stick_direction = device_states[dev_path]['last_stick_direction']
+
+                    if last_stick_direction != direction_name:
+                        print(f"スティック ({dev_type}): {direction_name}")
+                        device_states[dev_path]['last_stick_direction'] = direction_name
 
             time.sleep(0.008) # Sleep a bit shorter for multiple devices
 
