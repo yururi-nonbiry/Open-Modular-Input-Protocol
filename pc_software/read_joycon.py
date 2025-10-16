@@ -7,43 +7,52 @@ NINTENDO_VID = 0x057e
 
 # Joy-Con Product IDs
 JOYCON_L_PID = 0x2006
+JOYCON_R_PID = 0x2007
 
-def find_joycon_path():
-    """Finds the path of the first connected Joy-Con (L)."""
+def find_joycons():
+    """Finds all connected Joy-Cons (L and R)."""
+    devices = []
     for device_dict in hid.enumerate():
-        if device_dict['vendor_id'] == NINTENDO_VID and device_dict['product_id'] == JOYCON_L_PID:
-            return device_dict['path']
-    return None
+        pid = device_dict['product_id']
+        if device_dict['vendor_id'] == NINTENDO_VID:
+            if pid == JOYCON_L_PID:
+                devices.append({'type': 'L', 'path': device_dict['path']})
+            elif pid == JOYCON_R_PID:
+                devices.append({'type': 'R', 'path': device_dict['path']})
+    return devices
 
 def main():
     """
-    Connects to a Joy-Con (L) and reads input reports.
+    Connects to all found Joy-Cons and reads their input reports.
     """
-    joycon_path = find_joycon_path()
+    joycon_infos = find_joycons()
 
-    if not joycon_path:
-        print("Joy-Con (L) not found.")
-        print("Please make sure it is paired with your PC.")
+    if not joycon_infos:
+        print("No Joy-Cons found.")
+        print("Please make sure they are paired with your PC.")
         return
 
+    devices = []
     try:
-        print(f"Found Joy-Con (L) at path: {joycon_path.decode()}")
-        # hid.device is used here, and then we open the path.
-        device = hid.device()
-        device.open_path(joycon_path)
-        # Set the device to non-blocking mode
-        device.set_nonblocking(1)
-        print("Successfully opened Joy-Con (L).")
+        for info in joycon_infos:
+            path = info['path']
+            dev_type = info['type']
+            dev = hid.device()
+            dev.open_path(path)
+            dev.set_nonblocking(1)
+            devices.append({'type': dev_type, 'hid': dev})
+            print(f"Successfully opened Joy-Con ({dev_type}) at {path.decode()}")
+
         print("Reading input reports... Press Ctrl+C to exit.")
-        print("Try pressing some buttons on the Joy-Con.")
 
         while True:
-            # Read 64 bytes
-            report = device.read(64)
-            if report:
-                # Convert the list of integers to a hex string for display
-                hex_report = ''.join(f'{b:02x}' for b in report)
-                print(f"Report: {hex_report}")
+            for dev_info in devices:
+                device = dev_info['hid']
+                dev_type = dev_info['type']
+                report = device.read(64)
+                if report:
+                    hex_report = ''.join(f'{b:02x}' for b in report)
+                    print(f"Report ({dev_type}): {hex_report}")
             time.sleep(0.01)
 
     except IOError as e:
@@ -51,9 +60,9 @@ def main():
     except KeyboardInterrupt:
         print("\nExiting.")
     finally:
-        if 'device' in locals() and device:
-            device.close()
-            print("Device closed.")
+        print("Closing devices...")
+        for dev_info in devices:
+            dev_info['hid'].close()
 
 if __name__ == '__main__':
     main()
