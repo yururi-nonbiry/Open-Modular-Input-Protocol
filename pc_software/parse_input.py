@@ -28,6 +28,19 @@ BYTE2_MAPPING = {
     0x40: "L",
     0x80: "ZL",
 }
+
+# Byte 4 (index 3) for Analog Stick Direction
+STICK_DIRECTION_MAPPING = {
+    0: "右",
+    1: "右下",
+    2: "下",
+    3: "左下",
+    4: "左",
+    5: "左上",
+    6: "上",
+    7: "右上",
+    8: "ニュートラル",
+}
 # --- End of Definitions ---
 
 
@@ -60,6 +73,7 @@ def main():
         print("Try pressing some buttons on the Joy-Con.")
 
         last_button_state = {}
+        last_stick_direction = "不明"
 
         while True:
             report = device.read(64)
@@ -92,6 +106,17 @@ def main():
                     print(f"Released: {', '.join(sorted(released))}")
 
                 last_button_state = current_button_state
+
+                # --- Analog Stick Direction ---
+                stick_byte = report[3]
+                # Use .get() to default to "ニュートラル" for any unexpected value
+                direction_name = STICK_DIRECTION_MAPPING.get(stick_byte, "ニュートラル")
+
+                # Check if direction has changed
+                if last_stick_direction != direction_name:
+                    print(f"スティック: {direction_name}")
+                    last_stick_direction = direction_name
+                # --- End Analog Stick ---
 
             time.sleep(0.016) # Sleep for ~60Hz
 
