@@ -45,6 +45,15 @@ SHARED_MAPPING = {
     0x20: "キャプチャ (Capture)",
 }
 
+# バッテリー残量
+BATTERY_MAPPING = {
+    8: "満タン (Full)",
+    6: "中 (Medium)",
+    4: "低 (Low)",
+    2: "要充電 (Critical)",
+    0: "空 (Empty)",
+}
+
 # For both Joy-Cons, Analog Stick Direction
 # This is now calculated from analog values, not read directly
 STICK_DIRECTION_MAPPING = {
@@ -137,6 +146,7 @@ def main():
                 'last_stick_h': 2048,
                 'last_stick_v': 2048,
                 'led_index': initial_led_index,
+                'last_battery_level': -1,
             }
 
         print("Reading input reports... Press Ctrl+C to exit.")
@@ -150,6 +160,17 @@ def main():
                 report = device.read(64)
                 
                 if report and report[0] == 0x30:
+                    # --- Battery Level ---
+                    battery_info = report[2]
+                    battery_level = battery_info >> 4
+                    
+                    last_battery_level = device_states[dev_path].get('last_battery_level')
+                    if battery_level != last_battery_level:
+                        battery_status = BATTERY_MAPPING.get(battery_level, f"不明 ({battery_level})")
+                        is_charging = " (充電中)" if (battery_info & 0x10) else ""
+                        print(f"電池残量 ({dev_type}): {battery_status}{is_charging}")
+                        device_states[dev_path]['last_battery_level'] = battery_level
+
                     # --- Button Parsing ---
                     byte_3_right = report[3]
                     byte_4_shared = report[4]
