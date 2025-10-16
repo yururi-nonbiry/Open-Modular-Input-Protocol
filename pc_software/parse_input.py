@@ -111,7 +111,7 @@ def main():
         packet_counter += 1
 
     try:
-        for info in joycon_infos:
+        for i, info in enumerate(joycon_infos):
             path = info['path']
             dev_type = info['type']
             dev = hid.device()
@@ -124,13 +124,19 @@ def main():
             time.sleep(0.05)
             send_subcommand(dev, 0x03, b'\x30') # Set report mode 0x30
             time.sleep(0.05)
-            print(f"Initialized Joy-Con ({dev_type}).")
+
+            # Set initial player LED
+            led_patterns = [0x01, 0x02, 0x04, 0x08]
+            initial_led_index = i % 4
+            send_subcommand(dev, 0x30, bytes([led_patterns[initial_led_index]]))
+            print(f"Initialized Joy-Con ({dev_type}) with LED {initial_led_index + 1}.")
 
             devices.append({'type': dev_type, 'hid': dev, 'path': path})
             device_states[path] = {
                 'last_button_state': {},
                 'last_stick_h': 2048,
                 'last_stick_v': 2048,
+                'led_index': initial_led_index,
             }
 
         print("Reading input reports... Press Ctrl+C to exit.")
@@ -165,7 +171,25 @@ def main():
                     pressed = {name for name in current_button_state if name not in last_button_state}
                     released = {name for name in last_button_state if name not in current_button_state}
 
-                    if pressed: print(f"Pressed ({dev_type}): {', '.join(sorted(pressed))}")
+                    if pressed:
+                        print(f"Pressed ({dev_type}): {', '.join(sorted(pressed))}")
+
+                        # --- LED Control ---
+                        change_led = False
+                        if dev_type == 'L' and 'マイナス (-)' in pressed:
+                            change_led = True
+                        elif dev_type == 'R' and 'プラス (+)' in pressed:
+                            change_led = True
+                        
+                        if change_led:
+                            state = device_states[dev_path]
+                            state['led_index'] = (state['led_index'] + 1) % 4
+                            led_patterns = [0x01, 0x02, 0x04, 0x08]
+                            new_led_pattern = led_patterns[state['led_index']]
+                            send_subcommand(device, 0x30, bytes([new_led_pattern]))
+                            print(f"--> LED ({dev_type}) set to position {state['led_index'] + 1}")
+                        # --- End LED Control ---
+
                     if released: print(f"Released ({dev_type}): {', '.join(sorted(released))}")
                     device_states[dev_path]['last_button_state'] = current_button_state
 
