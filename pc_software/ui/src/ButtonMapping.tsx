@@ -19,6 +19,7 @@ const buttonLabels: { [key: string]: string } = {
   sl: 'SL ボタン',
   sr: 'SR ボタン',
   minus: 'マイナスボタン',
+  capture: 'キャプチャボタン', // 追加
   a: 'A ボタン',
   b: 'B ボタン',
   x: 'X ボタン',
@@ -32,7 +33,7 @@ const buttonLabels: { [key: string]: string } = {
 
 const joyConLButtons = [
   'arrow_up', 'arrow_down', 'arrow_left', 'arrow_right',
-  'stick_press_l', 'l', 'zl', 'sl', 'sr', 'minus'
+  'stick_press_l', 'l', 'zl', 'sl', 'sr', 'minus', 'capture' // 追加
 ];
 
 const joyConRButtons = [
