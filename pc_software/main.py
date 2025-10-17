@@ -208,7 +208,7 @@ async def joycon_reader_task():
                 if pressed or released:
                     await sio.emit('joycon_update', {'id': dev_info['path'], 'type': 'input', 'buttons': current_buttons})
 
-            await asyncio.sleep(0.016)
+            await asyncio.sleep(0.008) # 約120Hzでポーリング
 
     except (Exception, asyncio.CancelledError) as e:
         print(f"Joy-Con task stopped: {e}")
