@@ -4,26 +4,106 @@
 }
 
 .diagram-container {
-  flex-basis: 200px;
+  flex-basis: 120px;
   flex-shrink: 0;
+  padding-top: 1rem;
 }
 
 .joycon-diagram {
-  width: 100%;
-  height: 300px;
-  border-radius: 20px;
-  background-color: #f0f0f0;
   position: relative;
+  width: 100px;
+  height: 280px;
+  border: 2px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2);
+  margin: 0 auto;
+  padding: 10px;
+  font-family: sans-serif;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
 }
 
 .joycon-diagram-l {
   background-color: #00aaff;
+  border-radius: 40px 10px 10px 40px;
 }
 
 .joycon-diagram-r {
   background-color: #ff5555;
+  border-radius: 10px 40px 40px 10px;
 }
 
+.joycon-stick {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background-color: #333;
+  border-radius: 50%;
+  border: 2px solid #222;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+}
+
+.joycon-stick.pressed {
+  transform: translateY(2px);
+  box-shadow: inset 0 0 3px rgba(0,0,0,0.7);
+}
+
+.joycon-stick-l {
+  top: 60px;
+  left: 20px;
+}
+
+.joycon-stick-r {
+  top: 160px;
+  left: 25px;
+}
+
+.joycon-button {
+  position: absolute;
+  background-color: #222;
+  border-radius: 50%;
+  box-shadow: 0 2px 2px rgba(0,0,0,0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  transition: all 0.05s ease-in-out;
+}
+
+.joycon-button.pressed {
+  transform: translateY(1px);
+  box-shadow: 0 1px 1px rgba(0,0,0,0.3);
+  background-color: #111;
+}
+
+/* L-JoyCon Buttons */
+.arrow-up, .arrow-down, .arrow-left, .arrow-right { width: 22px; height: 22px; }
+.arrow-up    { top: 130px; left: 40px; }
+.arrow-down  { top: 180px; left: 40px; }
+.arrow-left  { top: 155px; left: 15px; }
+.arrow-right { top: 155px; left: 65px; }
+
+.minus { top: 25px; right: 20px; width: 20px; height: 20px; font-size: 20px; line-height: 20px; }
+.capture { bottom: 20px; left: 20px; width: 25px; height: 25px; border-radius: 5px; }
+.l-button { top: 0; left: 0; width: 60px; height: 25px; border-radius: 10px 10px 0 0; }
+.zl-button { top: -10px; left: 0; width: 70px; height: 25px; border-radius: 10px 10px 0 0; background-color: #1a1a1a; z-index: -1; }
+
+
+/* R-JoyCon Buttons */
+.button-a, .button-b, .button-x, .button-y { width: 28px; height: 28px; }
+.button-a { top: 130px; left: 55px; }
+.button-b { top: 160px; left: 25px; }
+.button-x { top: 100px; left: 25px; }
+.button-y { top: 130px; left: -5px; }
+
+.plus { top: 25px; left: 20px; width: 20px; height: 20px; font-size: 20px; line-height: 20px; }
+.home { bottom: 20px; right: 20px; width: 28px; height: 28px; border: 2px solid #555; }
+.r-button { top: 0; right: 0; width: 60px; height: 25px; border-radius: 10px 10px 0 0; }
+.zr-button { top: -10px; right: 0; width: 70px; height: 25px; border-radius: 10px 10px 0 0; background-color: #1a1a1a; z-index: -1; }
+
+
+/* --- Mapping List Styles --- */
 .mapping-list-container {
   flex-grow: 1;
   display: flex;
@@ -33,16 +113,16 @@
 
 .mapping-item {
   display: flex;
-  align-items: center; /* 垂直方向の中央揃えは維持 */
+  align-items: center;
 }
 
 .mapping-item label {
-  width: 150px; /* 固定幅に変更 */
-  margin-right: 1rem; /* 右側に余白を設ける */
-  text-align: left; /* 左揃えに戻す */
+  width: 150px;
+  margin-right: 1rem;
+  text-align: left;
 }
 
 .mapping-item.pressed {
-  background-color: #d0e3ff; /* ハイライト用の背景色 */
+  background-color: #d0e3ff;
   border-radius: 4px;
 }

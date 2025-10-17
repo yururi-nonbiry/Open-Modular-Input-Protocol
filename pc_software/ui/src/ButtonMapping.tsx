@@ -43,9 +43,33 @@ const joyConRButtons = [
 ];
 
 // Joy-Conの模式図コンポーネント
-const JoyConDiagram: React.FC<{ type: 'L' | 'R' }> = ({ type }) => (
+const JoyConDiagram: React.FC<{ type: 'L' | 'R', pressedButtons: { [key: string]: boolean } }> = ({ type, pressedButtons }) => (
   <div className={`joycon-diagram joycon-diagram-${type.toLowerCase()}`}>
-    {/* ここにCSSで描画したボタンを配置することも可能 */}
+    {type === 'L' ? (
+      <>
+        <div className={`joycon-button l-button ${pressedButtons['l'] ? 'pressed' : ''}`}>L</div>
+        <div className={`joycon-button zl-button ${pressedButtons['zl'] ? 'pressed' : ''}`}>ZL</div>
+        <div className={`joycon-stick joycon-stick-l ${pressedButtons['stick_press_l'] ? 'pressed' : ''}`}></div>
+        <div className={`joycon-button arrow-up ${pressedButtons['arrow_up'] ? 'pressed' : ''}`}>▲</div>
+        <div className={`joycon-button arrow-down ${pressedButtons['arrow_down'] ? 'pressed' : ''}`}>▼</div>
+        <div className={`joycon-button arrow-left ${pressedButtons['arrow_left'] ? 'pressed' : ''}`}>◀</div>
+        <div className={`joycon-button arrow-right ${pressedButtons['arrow_right'] ? 'pressed' : ''}`}>▶</div>
+        <div className={`joycon-button minus ${pressedButtons['minus'] ? 'pressed' : ''}`}>-</div>
+        <div className={`joycon-button capture ${pressedButtons['capture'] ? 'pressed' : ''}`}>●</div>
+      </>
+    ) : (
+      <>
+        <div className={`joycon-button r-button ${pressedButtons['r'] ? 'pressed' : ''}`}>R</div>
+        <div className={`joycon-button zr-button ${pressedButtons['zr'] ? 'pressed' : ''}`}>ZR</div>
+        <div className={`joycon-stick joycon-stick-r ${pressedButtons['stick_press_r'] ? 'pressed' : ''}`}></div>
+        <div className={`joycon-button button-a ${pressedButtons['a'] ? 'pressed' : ''}`}>A</div>
+        <div className={`joycon-button button-b ${pressedButtons['b'] ? 'pressed' : ''}`}>B</div>
+        <div className={`joycon-button button-x ${pressedButtons['x'] ? 'pressed' : ''}`}>X</div>
+        <div className={`joycon-button button-y ${pressedButtons['y'] ? 'pressed' : ''}`}>Y</div>
+        <div className={`joycon-button plus ${pressedButtons['plus'] ? 'pressed' : ''}`}>+</div>
+        <div className={`joycon-button home ${pressedButtons['home'] ? 'pressed' : ''}`}>⌂</div>
+      </>
+    )}
   </div>
 );
 
@@ -86,13 +110,13 @@ const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMappin
             })}
           </div>
           <div className="diagram-container">
-            <JoyConDiagram type={deviceType} />
+            <JoyConDiagram type={deviceType} pressedButtons={pressedButtons} />
           </div>
         </>
       ) : (
         <>
           <div className="diagram-container">
-            <JoyConDiagram type={deviceType} />
+            <JoyConDiagram type={deviceType} pressedButtons={pressedButtons} />
           </div>
           <div className="mapping-list-container">
             {buttons.map(button => {
