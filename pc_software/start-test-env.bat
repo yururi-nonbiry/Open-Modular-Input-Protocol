@@ -4,26 +4,24 @@ title OMIP Development Environment
 echo =================================================================
 echo  Starting Open-Modular-Input-Protocol Development Environment
 echo =================================================================
-echo.
-echo This script will start the UI and automatically launch the Python backend.
-echo.
-echo IMPORTANT:
-echo 1. Make sure you have run 'pip install -r requirements.txt' in the 'pc_software' directory.
-echo 2. Make sure you have run 'npm install' in the 'pc_software\ui' directory.
-echo.
-pause
-echo.
 
-REM Change directory to the UI folder, which is a subdirectory of this script's location.
+REM Start Python backend in a new window
+echo Starting Python backend (main.py)...
+start "Python Backend" cmd /c "call %~dp0venv\Scripts\activate.bat && python %~dp0main.py"
+
+REM Change directory to the UI folder
 cd /d "%~dp0ui"
 if %errorlevel% neq 0 (
     echo ERROR: Could not change directory to '%~dp0ui'.
-    echo Please run this script from the 'pc_software' directory.
     pause
     exit /b 1
 )
 
-echo Starting the application by running 'npm run dev'...
+REM Add a delay to wait for the backend to start
+echo Waiting for backend to initialize...
+timeout /t 5 /nobreak >nul
+
+echo Starting the UI (Vite + Electron)...
 npm run dev
 
 echo.

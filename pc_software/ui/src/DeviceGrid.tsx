@@ -1,6 +1,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PageSettings } from './contexts/DeviceSettingsContext';
+import JoyConCard from './JoyConCard'; // JoyConCardをインポート
+
+// Joy-Conの型定義
+interface JoyConDevice {
+  id: string;
+  type: 'L' | 'R';
+  battery: number;
+  input?: any;
+}
 
 interface DeviceData {
   type: 'digital' | 'analog' | 'encoder';
@@ -13,6 +22,7 @@ interface DeviceData {
 
 interface DeviceGridProps {
   devices: { [key: string]: DeviceData };
+  joycons: JoyConDevice[]; // joycons propを追加
   deviceSettings: PageSettings;
 }
 
@@ -52,7 +62,7 @@ const DeviceCard: React.FC<{ device: DeviceData; deviceKey: string; alias?: stri
   );
 };
 
-const DeviceGrid: React.FC<DeviceGridProps> = ({ devices, deviceSettings }) => {
+const DeviceGrid: React.FC<DeviceGridProps> = ({ devices, joycons, deviceSettings }) => {
   const { t } = useTranslation();
 
   const visibleDeviceKeys = Object.keys(devices)
@@ -63,17 +73,25 @@ const DeviceGrid: React.FC<DeviceGridProps> = ({ devices, deviceSettings }) => {
       return devA.device_id - devB.device_id || devA.port_id - devB.port_id;
     });
 
-  if (visibleDeviceKeys.length === 0) {
+  const hasVisibleDevices = visibleDeviceKeys.length > 0;
+  const hasJoyCons = joycons.length > 0;
+
+  if (!hasVisibleDevices && !hasJoyCons) {
     return <p>{t('waitingForData')}</p>;
   }
 
   return (
     <div className="device-grid">
+      {/* 既存のデバイスの表示 */}
       {visibleDeviceKeys.map(key => {
         const device = devices[key];
         const alias = deviceSettings[key]?.alias;
         return <DeviceCard key={key} device={device} deviceKey={key} alias={alias} />;
       })}
+      {/* Joy-Conの表示 */}
+      {joycons.map(joycon => (
+        <JoyConCard key={joycon.id} device={joycon} />
+      ))}
     </div>
   );
 };

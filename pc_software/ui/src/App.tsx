@@ -7,15 +7,47 @@ import Settings from './Settings';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DeviceSettingsProvider, useDeviceSettings } from './contexts/DeviceSettingsContext';
 
+// Joy-Conの型定義
+interface JoyConDevice {
+  id: string;
+  type: 'L' | 'R';
+  battery: number;
+  // 他のプロパティ（ボタン、スティックなど）もここに追加できます
+  input?: any; 
+}
+
 const MainContent: React.FC = () => {
   const { t } = useTranslation();
   const [devices, setDevices] = useState({});
+  const [joycons, setJoycons] = useState<JoyConDevice[]>([]); // Joy-Con用のstate
   const { getActiveProfilePages, findProfileByAppName } = useDeviceSettings();
   const [activeAppName, setActiveAppName] = useState('');
 
   useEffect(() => {
+    // 従来のデバイスアップデート
     socket.on('device_update', (data) => {
       setDevices(prevDevices => ({ ...prevDevices, ...data }));
+    });
+
+    // Joy-Conデバイスリストの受信
+    socket.on('joycon_devices', (data) => {
+      setJoycons(data.devices || []);
+    });
+
+    // Joy-Conの状態更新
+    socket.on('joycon_update', (data) => {
+      setJoycons(prevJoycons => 
+        prevJoycons.map(jc => {
+          if (jc.id === data.id) {
+            if (data.type === 'battery') {
+              return { ...jc, battery: data.level };
+            } else if (data.type === 'input') {
+              return { ...jc, input: data };
+            }
+          }
+          return jc;
+        })
+      );
     });
 
     window.electron.onActiveWindowChange((appName: string) => {
@@ -29,6 +61,8 @@ const MainContent: React.FC = () => {
 
     return () => {
       socket.off('device_update');
+      socket.off('joycon_devices');
+      socket.off('joycon_update');
     };
   }, [findProfileByAppName]);
 
@@ -39,7 +73,8 @@ const MainContent: React.FC = () => {
       <div className="main-content">
         <div className="grid-container">
           <h3>{t('deviceGrid')}</h3>
-          <DeviceGrid devices={devices} deviceSettings={deviceSettings} />
+          {/* DeviceGridにjoyconsを渡す */}
+          <DeviceGrid devices={devices} joycons={joycons} deviceSettings={deviceSettings} />
         </div>
         <div className="settings-panel">
           <Settings />
