@@ -138,7 +138,7 @@ def main():
                 'last_battery_level': -1,
             }
 
-        print("Reading input reports... Press A button to rumble. Press Ctrl+C to exit.")
+        print("Reading input reports... Press A (R) or Down (L) button to rumble. Press Ctrl+C to exit.")
 
         # メインループ：入力レポートの読み取りと処理
         while True:
@@ -208,6 +208,27 @@ def main():
                             rumble_data = bytearray(8)
                             rumble_data[0:4] = NEUTRAL_RUMBLE_DATA[0:4]  # 左用は無振動
                             rumble_data[4:8] = rumble_pulse              # 右用に振動データ
+                            # 振動コマンド送信（開始）
+                            send_rumble(device, global_packet_counter, rumble_data)
+                            global_packet_counter = (global_packet_counter + 1) % 16
+                            # 100ms後に振動停止コマンドを送信するスレッドを起動
+                            def stop_rumble():
+                                time.sleep(0.1)
+                                nonlocal global_packet_counter
+                                send_rumble(device, global_packet_counter, NEUTRAL_RUMBLE_DATA)
+                                global_packet_counter = (global_packet_counter + 1) % 16
+                                print("--> Rumble stopped.")
+                            threading.Thread(target=stop_rumble).start()
+
+                        # --- 振動トリガー（例：左Joy-Conの下ボタン） ---
+                        if dev_type == 'L' and '下 (Down)' in pressed:
+                            print("--> Triggering Rumble on Joy-Con (L)")
+                            # 低めの周波数・弱めの振幅で短く振動
+                            rumble_pulse = encode_rumble_data(160.0, 0.3)
+                            # 左Joy-Con用8バイトデータ：左側(前半)に振動パターン、右側(後半)は無振動
+                            rumble_data = bytearray(8)
+                            rumble_data[0:4] = rumble_pulse
+                            rumble_data[4:8] = NEUTRAL_RUMBLE_DATA[4:8]
                             # 振動コマンド送信（開始）
                             send_rumble(device, global_packet_counter, rumble_data)
                             global_packet_counter = (global_packet_counter + 1) % 16
