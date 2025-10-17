@@ -125,7 +125,7 @@ async def connect(sid, environ):
 @sio.on('load_joycon_mapping')
 async def load_joycon_mapping(sid, data):
     device_id = data.get('deviceId')
-    await sio.emit('joycon_mapping_loaded', {'mapping': state.joycon_mapping.get(device_id, {})}, to=sid)
+    await sio.emit('joycon_mapping_loaded', {'deviceId': device_id, 'mapping': state.joycon_mapping.get(device_id, {})}, to=sid)
 
 @sio.on('save_joycon_mapping')
 async def save_joycon_mapping(sid, data):

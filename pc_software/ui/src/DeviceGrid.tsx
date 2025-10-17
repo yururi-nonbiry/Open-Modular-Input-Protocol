@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PageSettings } from './contexts/DeviceSettingsContext';
-import JoyConCard from './JoyConCard'; // JoyConCardをインポート
+import UnifiedJoyConCard from './UnifiedJoyConCard'; // UnifiedJoyConCardをインポート
 
 // Joy-Conの型定義
 interface JoyConDevice {
@@ -22,7 +22,7 @@ interface DeviceData {
 
 interface DeviceGridProps {
   devices: { [key: string]: DeviceData };
-  joycons: JoyConDevice[]; // joycons propを追加
+  joycons: JoyConDevice[]; // joycons prop
   deviceSettings: PageSettings;
 }
 
@@ -88,10 +88,8 @@ const DeviceGrid: React.FC<DeviceGridProps> = ({ devices, joycons, deviceSetting
         const alias = deviceSettings[key]?.alias;
         return <DeviceCard key={key} device={device} deviceKey={key} alias={alias} />;
       })}
-      {/* Joy-Conの表示 */}
-      {joycons.map(joycon => (
-        <JoyConCard key={joycon.id} device={joycon} />
-      ))}
+      {/* Joy-Conの統合カード表示 */}
+      {hasJoyCons && <UnifiedJoyConCard allJoyCons={joycons} />}
     </div>
   );
 };
