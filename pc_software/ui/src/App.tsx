@@ -8,12 +8,11 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { DeviceSettingsProvider, useDeviceSettings } from './contexts/DeviceSettingsContext';
 
 // Joy-Conの型定義
-interface JoyConDevice {
+export interface JoyConDevice {
   id: string;
   type: 'L' | 'R';
   battery: number;
-  // 他のプロパティ（ボタン、スティックなど）もここに追加できます
-  input?: any; 
+  buttons?: { [key: string]: boolean }; // ボタン状態を保持
 }
 
 const MainContent: React.FC = () => {
@@ -42,7 +41,7 @@ const MainContent: React.FC = () => {
             if (data.type === 'battery') {
               return { ...jc, battery: data.level };
             } else if (data.type === 'input') {
-              return { ...jc, input: data };
+              return { ...jc, buttons: data.buttons }; // ボタン状態を直接保持
             }
           }
           return jc;

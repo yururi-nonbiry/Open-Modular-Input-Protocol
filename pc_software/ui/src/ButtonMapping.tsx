@@ -5,6 +5,7 @@ interface ButtonMappingProps {
   deviceType: 'L' | 'R';
   initialMapping: { [key: string]: string };
   onMappingChange: (mapping: { [key: string]: string }) => void;
+  pressedButtons: { [key: string]: boolean };
 }
 
 // ボタンの内部名と表示名のマッピング
@@ -48,7 +49,7 @@ const JoyConDiagram: React.FC<{ type: 'L' | 'R' }> = ({ type }) => (
   </div>
 );
 
-const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMapping, onMappingChange }) => {
+const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMapping, onMappingChange, pressedButtons }) => {
   const [mapping, setMapping] = useState(initialMapping);
 
   useEffect(() => {
@@ -69,18 +70,21 @@ const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMappin
         <JoyConDiagram type={deviceType} />
       </div>
       <div className="mapping-list-container">
-        {buttons.map(button => (
-          <div key={button} className="mapping-item">
-            <label htmlFor={`map-${button}`}>{buttonLabels[button] || button}</label>
-            <input
-              id={`map-${button}`}
-              type="text"
-              value={mapping[button] || ''}
-              onChange={(e) => handleInputChange(button, e.target.value)}
-              placeholder="例: a, ctrl_l, space"
-            />
-          </div>
-        ))}
+        {buttons.map(button => {
+          const isPressed = pressedButtons && pressedButtons[button];
+          return (
+            <div key={button} className={`mapping-item ${isPressed ? 'pressed' : ''}`}>
+              <label htmlFor={`map-${button}`}>{buttonLabels[button] || button}</label>
+              <input
+                id={`map-${button}`}
+                type="text"
+                value={mapping[button] || ''}
+                onChange={(e) => handleInputChange(button, e.target.value)}
+                placeholder="例: a, ctrl_l, space"
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

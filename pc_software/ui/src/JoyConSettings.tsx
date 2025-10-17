@@ -85,6 +85,7 @@ const JoyConSettings: React.FC<JoyConSettingsProps> = ({ isOpen, onClose, allJoy
                 deviceType="L"
                 initialMapping={mappings.L || {}}
                 onMappingChange={(newMap) => handleMappingChange('L', newMap)}
+                pressedButtons={joyConL.buttons || {}}
               />
             ) : (
               <p>Joy-Con (L) not connected.</p>
@@ -96,6 +97,7 @@ const JoyConSettings: React.FC<JoyConSettingsProps> = ({ isOpen, onClose, allJoy
                 deviceType="R"
                 initialMapping={mappings.R || {}}
                 onMappingChange={(newMap) => handleMappingChange('R', newMap)}
+                pressedButtons={joyConR.buttons || {}}
               />
             ) : (
               <p>Joy-Con (R) not connected.</p>
