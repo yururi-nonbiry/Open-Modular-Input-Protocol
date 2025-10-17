@@ -66,26 +66,53 @@ const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMappin
 
   return (
     <div className="button-mapping-layout">
-      <div className="diagram-container">
-        <JoyConDiagram type={deviceType} />
-      </div>
-      <div className="mapping-list-container">
-        {buttons.map(button => {
-          const isPressed = pressedButtons && pressedButtons[button];
-          return (
-            <div key={button} className={`mapping-item ${isPressed ? 'pressed' : ''}`}>
-              <label htmlFor={`map-${button}`}>{buttonLabels[button] || button}</label>
-              <input
-                id={`map-${button}`}
-                type="text"
-                value={mapping[button] || ''}
-                onChange={(e) => handleInputChange(button, e.target.value)}
-                placeholder="例: a, ctrl_l, space"
-              />
-            </div>
-          );
-        })}
-      </div>
+      {deviceType === 'L' ? (
+        <>
+          <div className="mapping-list-container">
+            {buttons.map(button => {
+              const isPressed = pressedButtons && pressedButtons[button];
+              return (
+                <div key={button} className={`mapping-item ${isPressed ? 'pressed' : ''}`}>
+                  <label htmlFor={`map-${button}`}>{buttonLabels[button] || button}</label>
+                  <input
+                    id={`map-${button}`}
+                    type="text"
+                    value={mapping[button] || ''}
+                    onChange={(e) => handleInputChange(button, e.target.value)}
+                    placeholder="例: a, ctrl_l, space"
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div className="diagram-container">
+            <JoyConDiagram type={deviceType} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="diagram-container">
+            <JoyConDiagram type={deviceType} />
+          </div>
+          <div className="mapping-list-container">
+            {buttons.map(button => {
+              const isPressed = pressedButtons && pressedButtons[button];
+              return (
+                <div key={button} className={`mapping-item ${isPressed ? 'pressed' : ''}`}>
+                  <label htmlFor={`map-${button}`}>{buttonLabels[button] || button}</label>
+                  <input
+                    id={`map-${button}`}
+                    type="text"
+                    value={mapping[button] || ''}
+                    onChange={(e) => handleInputChange(button, e.target.value)}
+                    placeholder="例: a, ctrl_l, space"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 };
