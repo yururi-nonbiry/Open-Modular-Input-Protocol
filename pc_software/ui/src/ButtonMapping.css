@@ -55,12 +55,12 @@
 
 .joycon-stick-l {
   top: 66px;
-  left: 28px;
+  left: 38px;
 }
 
 .joycon-stick-r {
-  top: 118px;
-  left: 34px;
+  top: 168px;
+  left: 70px;
 }
 
 .joycon-button {
@@ -127,8 +127,8 @@
 }
 
 .l-button {
-  top: 4px;
-  left: 10px;
+  top: -26px;
+  left: 60px;
   width: 68px;
   height: 26px;
   border-radius: 14px 14px 0 0;
@@ -136,7 +136,7 @@
 }
 
 .zl-button {
-  top: -12px;
+  top: -42px;
   left: 4px;
   width: 80px;
   height: 28px;
@@ -169,10 +169,11 @@
 .sr-button-left {
   right: -30px;
   border-radius: 0 14px 14px 0;
+
 }
 
-.sl-button-left { top: 102px; }
-.sr-button-left { top: 196px; }
+.sl-button-left { top: 72px; }
+.sr-button-left { top: 216px; }
 
 
 /* R-JoyCon Buttons */
@@ -182,10 +183,10 @@
   font-size: 13px;
 }
 
-.button-a { top: 148px; left: 90px; }
-.button-b { top: 184px; left: 60px; }
-.button-x { top: 112px; left: 60px; }
-.button-y { top: 148px; left: 30px; }
+.button-a { top: 68px; left: 110px; }
+.button-b { top: 104px; left: 80px; }
+.button-x { top: 32px; left: 80px; }
+.button-y { top: 68px; left: 50px; }
 
 .plus {
   top: 6px;
@@ -206,8 +207,8 @@
 }
 
 .r-button {
-  top: 4px;
-  right: 10px;
+  top: -26px;
+  right:60px;
   width: 68px;
   height: 26px;
   border-radius: 14px 14px 0 0;
@@ -215,7 +216,7 @@
 }
 
 .zr-button {
-  top: -12px;
+  top: -42px;
   right: 4px;
   width: 80px;
   height: 28px;
@@ -234,8 +235,8 @@
   border-radius: 14px 0 0 14px;
 }
 
-.sl-button-right { top: 102px; }
-.sr-button-right { top: 196px; }
+.sl-button-right { top: 72px; }
+.sr-button-right { top: 216px; }
 
 
 /* --- Mapping List Styles --- */
