@@ -88,6 +88,8 @@
 .capture { bottom: 20px; left: 20px; width: 25px; height: 25px; border-radius: 5px; }
 .l-button { top: 0; left: 0; width: 60px; height: 25px; border-radius: 10px 10px 0 0; }
 .zl-button { top: -10px; left: 0; width: 70px; height: 25px; border-radius: 10px 10px 0 0; background-color: #1a1a1a; z-index: 2; }
+.sl-button-left { top: 70px; right: -18px; width: 24px; height: 48px; border-radius: 0 12px 12px 0; }
+.sr-button-left { top: 150px; right: -18px; width: 24px; height: 48px; border-radius: 0 12px 12px 0; }
 
 
 /* R-JoyCon Buttons */
@@ -101,6 +103,8 @@
 .home { bottom: 20px; right: 20px; width: 28px; height: 28px; border: 2px solid #555; }
 .r-button { top: 0; right: 0; width: 60px; height: 25px; border-radius: 10px 10px 0 0; }
 .zr-button { top: -10px; right: 0; width: 70px; height: 25px; border-radius: 10px 10px 0 0; background-color: #1a1a1a; z-index: 2; }
+.sl-button-right { top: 70px; left: -18px; width: 24px; height: 48px; border-radius: 12px 0 0 12px; }
+.sr-button-right { top: 150px; left: -18px; width: 24px; height: 48px; border-radius: 12px 0 0 12px; }
 
 
 /* --- Mapping List Styles --- */
