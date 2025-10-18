@@ -80,8 +80,58 @@
 
 .joycon-button.pressed {
   transform: translateY(1px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  background: radial-gradient(circle at 30% 30%, #1f1f22 0%, #0d0d0f 80%);
+  background: radial-gradient(circle at 30% 30%, #5df 0%, #0cf 80%); /* 明るい青系の色に変更 */
+  box-shadow: 0 0 8px 2px rgba(0, 204, 255, 0.7), /* 外側の光彩 */
+              inset 0 0 5px rgba(255, 255, 255, 0.5); /* 内側のハイライト */
+  color: #fff; /* 文字色を白に */
+}
+
+.joycon-stick.pressed {
+  transform: translateY(2px);
+  background: radial-gradient(circle at 35% 35%, #5df 0%, #0cf 70%);
+  box-shadow: 0 0 8px 2px rgba(0, 204, 255, 0.7),
+              inset 1px 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* --- UnifiedJoyConCard Styles --- */
+.joycon-card-unified .card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.joycon-diagram-container-unified {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem;
+  transform: scale(0.8); /* 少し小さく表示 */
+  margin-top: -40px; /* 上方向のマージンを調整 */
+  margin-bottom: -40px; /* 下方向のマージンを調整 */
+}
+
+.joycon-placeholder {
+  width: 120px; /* joycon-diagram の幅に合わせる */
+  height: 300px; /* joycon-diagram の高さに合わせる */
+  border: 2px dashed #ccc;
+  border-radius: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.joycon-placeholder.l {
+  border-radius: 60px 24px 24px 60px;
+}
+.joycon-placeholder.r {
+  border-radius: 24px 60px 60px 24px;
+}
+
+.joycon-placeholder::after {
+  content: 'Disconnected';
 }
 
 .joycon-strap-bar {

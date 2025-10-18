@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import JoyConSettings from './JoyConSettings';
+import { JoyConDiagram } from './ButtonMapping'; // インポート
+import './ButtonMapping.css'; // スタイルシートもインポート
 
 // Joy-Conの型定義
 interface JoyConDevice {
   id: string;
   type: 'L' | 'R';
   battery: number;
-  input?: any;
+  buttons?: { [key: string]: boolean }; // ボタン状態を保持
 }
 
 interface UnifiedJoyConCardProps {
@@ -43,7 +45,19 @@ const UnifiedJoyConCard: React.FC<UnifiedJoyConCardProps> = ({ allJoyCons }) => 
           <span>Joy-Con</span>
         </div>
         <div className="card-content">
-            <div className="joycon-status-group">
+          <div className="joycon-diagram-container-unified">
+            {joyConL ? (
+              <JoyConDiagram type="L" pressedButtons={joyConL.buttons || {}} />
+            ) : (
+              <div className="joycon-placeholder l" />
+            )}
+            {joyConR ? (
+              <JoyConDiagram type="R" pressedButtons={joyConR.buttons || {}} />
+            ) : (
+              <div className="joycon-placeholder r" />
+            )}
+          </div>
+          <div className="joycon-status-group">
                 <div className={`joycon-status-item ${joyConL ? 'connected' : ''}`}>
                     <span>L: {joyConL ? `Connected (Battery: ${getBatteryDisplay(joyConL.battery)})` : 'Disconnected'}</span>
                 </div>

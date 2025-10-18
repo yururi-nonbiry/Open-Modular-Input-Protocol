@@ -43,7 +43,7 @@ const joyConRButtons = [
 ];
 
 // Joy-Conの模式図コンポーネント
-const JoyConDiagram: React.FC<{ type: 'L' | 'R', pressedButtons: { [key: string]: boolean } }> = ({ type, pressedButtons }) => (
+export const JoyConDiagram: React.FC<{ type: 'L' | 'R', pressedButtons: { [key: string]: boolean } }> = ({ type, pressedButtons }) => (
   <div className={`joycon-diagram joycon-diagram-${type.toLowerCase()}`}>
     {type === 'L' ? (
       <>
@@ -65,8 +65,8 @@ const JoyConDiagram: React.FC<{ type: 'L' | 'R', pressedButtons: { [key: string]
         
         <div className={`joycon-button r-button ${pressedButtons['r'] ? 'pressed' : ''}`}>R</div>
         <div className={`joycon-button zr-button ${pressedButtons['zr'] ? 'pressed' : ''}`}>ZR</div>
-        <div className={`joycon-button sl-button-right ${pressedButtons['sl'] ? 'pressed' : ''}`}>SL</div>
-        <div className={`joycon-button sr-button-right ${pressedButtons['sr'] ? 'pressed' : ''}`}>SR</div>
+        <div className={`joycon-button sl-button-right ${pressedButtons['sr'] ? 'pressed' : ''}`}>SR</div>
+        <div className={`joycon-button sr-button-right ${pressedButtons['sl'] ? 'pressed' : ''}`}>SL</div>
         <div className={`joycon-stick joycon-stick-r ${pressedButtons['stick_press_r'] ? 'pressed' : ''}`}></div>
         <div className={`joycon-button button-a ${pressedButtons['a'] ? 'pressed' : ''}`}>A</div>
         <div className={`joycon-button button-b ${pressedButtons['b'] ? 'pressed' : ''}`}>B</div>
