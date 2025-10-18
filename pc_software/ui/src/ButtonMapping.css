@@ -48,19 +48,14 @@
   transition: transform 0.05s ease-in-out;
 }
 
-.joycon-stick.pressed {
-  transform: translateY(2px);
-  box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.8);
-}
-
 .joycon-stick-l {
   top: 66px;
-  left: 38px;
+  left: 28px;
 }
 
 .joycon-stick-r {
-  top: 168px;
-  left: 70px;
+  top: 118px;
+  left: 44px; /* 34px -> 44px */
 }
 
 .joycon-button {
@@ -74,7 +69,7 @@
   align-items: center;
   color: #f2f2f2;
   user-select: none;
-  transition: transform 0.05s ease-in-out, box-shadow 0.05s ease-in-out;
+  transition: transform 0.05s ease-in-out, box-shadow 0.05s ease-in-out, background 0.05s ease-in-out;
   z-index: 3;
 }
 
@@ -91,47 +86,6 @@
   background: radial-gradient(circle at 35% 35%, #5df 0%, #0cf 70%);
   box-shadow: 0 0 8px 2px rgba(0, 204, 255, 0.7),
               inset 1px 1px 4px rgba(0, 0, 0, 0.8);
-}
-
-/* --- UnifiedJoyConCard Styles --- */
-.joycon-card-unified .card-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.joycon-diagram-container-unified {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  padding: 1rem;
-  transform: scale(0.8); /* 少し小さく表示 */
-  margin-top: -40px; /* 上方向のマージンを調整 */
-  margin-bottom: -40px; /* 下方向のマージンを調整 */
-}
-
-.joycon-placeholder {
-  width: 120px; /* joycon-diagram の幅に合わせる */
-  height: 300px; /* joycon-diagram の高さに合わせる */
-  border: 2px dashed #ccc;
-  border-radius: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #aaa;
-  font-size: 0.9rem;
-}
-
-.joycon-placeholder.l {
-  border-radius: 60px 24px 24px 60px;
-}
-.joycon-placeholder.r {
-  border-radius: 24px 60px 60px 24px;
-}
-
-.joycon-placeholder::after {
-  content: 'Disconnected';
 }
 
 .joycon-strap-bar {
@@ -177,8 +131,8 @@
 }
 
 .l-button {
-  top: -26px;
-  left: 60px;
+  top: -26px; /* 4px -> -26px */
+  left: 20px; /* 10px -> 20px */
   width: 68px;
   height: 26px;
   border-radius: 14px 14px 0 0;
@@ -186,7 +140,7 @@
 }
 
 .zl-button {
-  top: -42px;
+  top: -42px; /* -12px -> -42px */
   left: 4px;
   width: 80px;
   height: 28px;
@@ -219,11 +173,10 @@
 .sr-button-left {
   right: -30px;
   border-radius: 0 14px 14px 0;
-
 }
 
-.sl-button-left { top: 72px; }
-.sr-button-left { top: 216px; }
+.sl-button-left { top: 102px; }
+.sr-button-left { top: 196px; }
 
 
 /* R-JoyCon Buttons */
@@ -233,10 +186,10 @@
   font-size: 13px;
 }
 
-.button-a { top: 68px; left: 110px; }
-.button-b { top: 104px; left: 80px; }
-.button-x { top: 32px; left: 80px; }
-.button-y { top: 68px; left: 50px; }
+.button-a { top: 148px; left: 100px; } /* 90px -> 100px */
+.button-b { top: 184px; left: 70px; }  /* 60px -> 70px */
+.button-x { top: 112px; left: 70px; }  /* 60px -> 70px */
+.button-y { top: 148px; left: 40px; }  /* 30px -> 40px */
 
 .plus {
   top: 6px;
@@ -257,8 +210,8 @@
 }
 
 .r-button {
-  top: -26px;
-  right:60px;
+  top: -26px; /* 4px -> -26px */
+  right: 20px; /* 10px -> 20px */
   width: 68px;
   height: 26px;
   border-radius: 14px 14px 0 0;
@@ -266,7 +219,7 @@
 }
 
 .zr-button {
-  top: -42px;
+  top: -42px; /* -12px -> -42px */
   right: 4px;
   width: 80px;
   height: 28px;
@@ -285,8 +238,8 @@
   border-radius: 14px 0 0 14px;
 }
 
-.sl-button-right { top: 72px; }
-.sr-button-right { top: 216px; }
+.sl-button-right { top: 102px; }
+.sr-button-right { top: 196px; }
 
 
 /* --- Mapping List Styles --- */
@@ -311,4 +264,57 @@
 .mapping-item.pressed {
   background-color: #d0e3ff;
   border-radius: 4px;
+}
+
+/* --- UnifiedJoyConCard Styles --- */
+.joycon-card-unified .card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.joycon-diagram-container-unified {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem;
+  transform: scale(0.8); /* 少し小さく表示 */
+  margin-top: -40px; /* 上方向のマージンを調整 */
+  margin-bottom: -40px; /* 下方向のマージンを調整 */
+}
+
+.joycon-placeholder {
+  width: 120px; /* joycon-diagram の幅に合わせる */
+  height: 300px; /* joycon-diagram の高さに合わせる */
+  border: 2px dashed #ccc;
+  border-radius: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.joycon-placeholder.l {
+  border-radius: 60px 24px 24px 60px;
+}
+.joycon-placeholder.r {
+  border-radius: 24px 60px 60px 24px;
+}
+
+.joycon-placeholder::after {
+  content: 'Disconnected';
+}
+
+/* --- Stick Control Styles --- */
+.stick-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.details-button {
+  padding: 4px 8px;
+  font-size: 0.8rem;
 }

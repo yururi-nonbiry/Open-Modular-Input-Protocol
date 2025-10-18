@@ -2,14 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PageSettings } from './contexts/DeviceSettingsContext';
 import UnifiedJoyConCard from './UnifiedJoyConCard'; // UnifiedJoyConCardをインポート
-
-// Joy-Conの型定義
-interface JoyConDevice {
-  id: string;
-  type: 'L' | 'R';
-  battery: number;
-  input?: any;
-}
+import type { JoyConDevice } from './types';
 
 interface DeviceData {
   type: 'digital' | 'analog' | 'encoder';

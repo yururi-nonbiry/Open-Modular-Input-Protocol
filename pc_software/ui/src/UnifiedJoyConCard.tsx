@@ -2,14 +2,7 @@ import React, { useState, useMemo } from 'react';
 import JoyConSettings from './JoyConSettings';
 import { JoyConDiagram } from './ButtonMapping'; // インポート
 import './ButtonMapping.css'; // スタイルシートもインポート
-
-// Joy-Conの型定義
-interface JoyConDevice {
-  id: string;
-  type: 'L' | 'R';
-  battery: number;
-  buttons?: { [key: string]: boolean }; // ボタン状態を保持
-}
+import type { JoyConDevice } from './types';
 
 interface UnifiedJoyConCardProps {
   allJoyCons: JoyConDevice[];

@@ -6,14 +6,7 @@ import DeviceGrid from './DeviceGrid';
 import Settings from './Settings';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DeviceSettingsProvider, useDeviceSettings } from './contexts/DeviceSettingsContext';
-
-// Joy-Conの型定義
-export interface JoyConDevice {
-  id: string;
-  type: 'L' | 'R';
-  battery: number;
-  buttons?: { [key: string]: boolean }; // ボタン状態を保持
-}
+import type { JoyConDevice } from './types';
 
 const MainContent: React.FC = () => {
   const { t } = useTranslation();
