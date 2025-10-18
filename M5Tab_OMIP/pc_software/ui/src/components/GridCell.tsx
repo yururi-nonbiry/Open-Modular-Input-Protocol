@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { DragEvent as ReactDragEvent } from "react";
 import { useDropzone } from "react-dropzone";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import { JoyConIcon } from "./JoyConIcon";
 
 interface CellConfig {
     icon: string | null;
@@ -226,7 +227,7 @@ export function GridCell({ config, isFlashing, onClick, onIconDrop, onIconClear 
                     {imageUrl ? (
                         <img src={imageUrl} alt={config.action} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                     ) : (
-                        <Typography variant="h5">?</Typography>
+                        <JoyConIcon sx={{ fontSize: 80 }} />
                     )}
                 </Box>
                 <Typography variant="caption" noWrap sx={{ width: '100%', textAlign: 'center' }}>
