@@ -27,33 +27,13 @@
 }
 
 .joycon-diagram-l {
-  background: linear-gradient(90deg, #ff5c46 0%, #ff4a38 58%, #2e3035 58%, #2e3035 100%);
+  background: linear-gradient(90deg, #ff5c46 0%, #ff4a38 79%, #2e3035 79%, #2e3035 100%);
   border-radius: 60px 24px 24px 60px;
 }
 
 .joycon-diagram-r {
-  background: linear-gradient(90deg, #2e3035 0%, #2e3035 42%, #00a8ff 42%, #00c6ff 100%);
+  background: linear-gradient(90deg, #2e3035 0%, #2e3035 21%, #00a8ff 21%, #00c6ff 100%);
   border-radius: 24px 60px 60px 24px;
-}
-
-.joycon-diagram-l::before,
-.joycon-diagram-r::before {
-  content: '';
-  position: absolute;
-  top: 28px;
-  bottom: 28px;
-  width: 9px;
-  background: linear-gradient(180deg, #2c2f33 0%, #1a1c1f 100%);
-  border-radius: 5px;
-  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.6);
-}
-
-.joycon-diagram-l::before {
-  right: 32px;
-}
-
-.joycon-diagram-r::before {
-  left: 32px;
 }
 
 .joycon-stick {
