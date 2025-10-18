@@ -47,6 +47,7 @@ const JoyConDiagram: React.FC<{ type: 'L' | 'R', pressedButtons: { [key: string]
   <div className={`joycon-diagram joycon-diagram-${type.toLowerCase()}`}>
     {type === 'L' ? (
       <>
+        <div className="joycon-strap-bar strap-bar-left"></div>
         <div className={`joycon-button l-button ${pressedButtons['l'] ? 'pressed' : ''}`}>L</div>
         <div className={`joycon-button zl-button ${pressedButtons['zl'] ? 'pressed' : ''}`}>ZL</div>
         <div className={`joycon-button sl-button-left ${pressedButtons['sl'] ? 'pressed' : ''}`}>SL</div>
@@ -57,10 +58,11 @@ const JoyConDiagram: React.FC<{ type: 'L' | 'R', pressedButtons: { [key: string]
         <div className={`joycon-button arrow-left ${pressedButtons['arrow_left'] ? 'pressed' : ''}`}>◀</div>
         <div className={`joycon-button arrow-right ${pressedButtons['arrow_right'] ? 'pressed' : ''}`}>▶</div>
         <div className={`joycon-button minus ${pressedButtons['minus'] ? 'pressed' : ''}`}>-</div>
-        <div className={`joycon-button capture ${pressedButtons['capture'] ? 'pressed' : ''}`}>●</div>
+        <div className={`joycon-button capture ${pressedButtons['capture'] ? 'pressed' : ''}`}>■</div>
       </>
     ) : (
       <>
+        <div className="joycon-strap-bar strap-bar-right"></div>
         <div className={`joycon-button r-button ${pressedButtons['r'] ? 'pressed' : ''}`}>R</div>
         <div className={`joycon-button zr-button ${pressedButtons['zr'] ? 'pressed' : ''}`}>ZR</div>
         <div className={`joycon-button sl-button-right ${pressedButtons['sl'] ? 'pressed' : ''}`}>SL</div>

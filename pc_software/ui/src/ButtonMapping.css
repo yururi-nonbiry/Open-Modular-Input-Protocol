@@ -11,100 +11,251 @@
 
 .joycon-diagram {
   position: relative;
-  width: 100px;
-  height: 280px;
-  border: 2px solid rgba(0, 0, 0, 0.5);
-  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2);
+  width: 120px;
+  height: 300px;
   margin: 0 auto;
-  padding: 10px;
-  font-family: sans-serif;
-  color: white;
+  padding: 18px 18px 28px;
+  border-radius: 60px;
+  border: 2px solid #141414;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  font-family: 'Segoe UI', sans-serif;
+  color: #f5f5f5;
   font-size: 12px;
-  font-weight: bold;
+  font-weight: 600;
   text-align: center;
+  overflow: visible;
 }
 
 .joycon-diagram-l {
-  background-color: #00aaff;
-  border-radius: 40px 10px 10px 40px;
+  background: linear-gradient(90deg, #ff5c46 0%, #ff4a38 58%, #2e3035 58%, #2e3035 100%);
+  border-radius: 60px 24px 24px 60px;
 }
 
 .joycon-diagram-r {
-  background-color: #ff5555;
-  border-radius: 10px 40px 40px 10px;
+  background: linear-gradient(90deg, #2e3035 0%, #2e3035 42%, #00a8ff 42%, #00c6ff 100%);
+  border-radius: 24px 60px 60px 24px;
+}
+
+.joycon-diagram-l::before,
+.joycon-diagram-r::before {
+  content: '';
+  position: absolute;
+  top: 28px;
+  bottom: 28px;
+  width: 9px;
+  background: linear-gradient(180deg, #2c2f33 0%, #1a1c1f 100%);
+  border-radius: 5px;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+.joycon-diagram-l::before {
+  right: 32px;
+}
+
+.joycon-diagram-r::before {
+  left: 32px;
 }
 
 .joycon-stick {
   position: absolute;
-  width: 40px;
-  height: 40px;
-  background-color: #333;
+  width: 46px;
+  height: 46px;
+  background: radial-gradient(circle at 35% 35%, #3c3f43 0%, #1a1b1d 70%);
   border-radius: 50%;
-  border: 2px solid #222;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+  border: 2px solid #090909;
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.7), 0 4px 8px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  transition: transform 0.05s ease-in-out;
 }
 
 .joycon-stick.pressed {
   transform: translateY(2px);
-  box-shadow: inset 0 0 3px rgba(0,0,0,0.7);
+  box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.8);
 }
 
 .joycon-stick-l {
-  top: 60px;
-  left: 20px;
+  top: 66px;
+  left: 28px;
 }
 
 .joycon-stick-r {
-  top: 160px;
-  left: 25px;
+  top: 118px;
+  left: 34px;
 }
 
 .joycon-button {
   position: absolute;
-  background-color: #222;
+  background: radial-gradient(circle at 30% 30%, #2f2f32 0%, #18181a 80%);
   border-radius: 50%;
-  box-shadow: 0 2px 2px rgba(0,0,0,0.3);
+  border: 1px solid #080808;
+  box-shadow: 0 3px 4px rgba(0, 0, 0, 0.35);
   display: flex;
   justify-content: center;
   align-items: center;
+  color: #f2f2f2;
   user-select: none;
-  transition: all 0.05s ease-in-out;
+  transition: transform 0.05s ease-in-out, box-shadow 0.05s ease-in-out;
+  z-index: 3;
 }
 
 .joycon-button.pressed {
   transform: translateY(1px);
-  box-shadow: 0 1px 1px rgba(0,0,0,0.3);
-  background-color: #111;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  background: radial-gradient(circle at 30% 30%, #1f1f22 0%, #0d0d0f 80%);
+}
+
+.joycon-strap-bar {
+  position: absolute;
+  width: 18px;
+  height: 252px;
+  top: 24px;
+  background: linear-gradient(90deg, #1d1f23 0%, #2a2c31 50%, #0f1014 100%);
+  border-radius: 12px;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.75);
+  z-index: 1;
 }
 
 /* L-JoyCon Buttons */
-.arrow-up, .arrow-down, .arrow-left, .arrow-right { width: 22px; height: 22px; }
-.arrow-up    { top: 130px; left: 40px; }
-.arrow-down  { top: 180px; left: 40px; }
-.arrow-left  { top: 155px; left: 15px; }
-.arrow-right { top: 155px; left: 65px; }
+.arrow-up, .arrow-down, .arrow-left, .arrow-right {
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+}
 
-.minus { top: 25px; right: 20px; width: 20px; height: 20px; font-size: 20px; line-height: 20px; }
-.capture { bottom: 20px; left: 20px; width: 25px; height: 25px; border-radius: 5px; }
-.l-button { top: 0; left: 0; width: 60px; height: 25px; border-radius: 10px 10px 0 0; }
-.zl-button { top: -10px; left: 0; width: 70px; height: 25px; border-radius: 10px 10px 0 0; background-color: #1a1a1a; z-index: 2; }
-.sl-button-left { top: 70px; right: -18px; width: 24px; height: 48px; border-radius: 0 12px 12px 0; }
-.sr-button-left { top: 150px; right: -18px; width: 24px; height: 48px; border-radius: 0 12px 12px 0; }
+.arrow-up    { top: 154px; left: 48px; }
+.arrow-down  { top: 208px; left: 48px; }
+.arrow-left  { top: 182px; left: 24px; }
+.arrow-right { top: 182px; left: 72px; }
+
+.minus {
+  top: 32px;
+  right: 38px;
+  width: 26px;
+  height: 26px;
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.capture {
+  bottom: 68px;
+  left: 46px;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: #1c1d20;
+  font-size: 14px;
+}
+
+.l-button {
+  top: 4px;
+  left: 10px;
+  width: 68px;
+  height: 26px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, #45474d 0%, #1f2025 100%);
+}
+
+.zl-button {
+  top: -12px;
+  left: 4px;
+  width: 80px;
+  height: 28px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1f2126 0%, #08090b 100%);
+  z-index: 4;
+}
+
+.strap-bar-left {
+  right: -34px;
+}
+
+.sl-button-left,
+.sr-button-left,
+.sl-button-right,
+.sr-button-right {
+  width: 28px;
+  height: 52px;
+  font-size: 12px;
+  color: #e8e8e8;
+  background: linear-gradient(180deg, #2a2b30 0%, #16171b 100%);
+  border: 1px solid #050506;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+.sl-button-left,
+.sr-button-left {
+  right: -20px;
+  border-radius: 0 14px 14px 0;
+}
+
+.sl-button-left { top: 102px; }
+.sr-button-left { top: 196px; }
 
 
 /* R-JoyCon Buttons */
-.button-a, .button-b, .button-x, .button-y { width: 28px; height: 28px; }
-.button-a { top: 130px; left: 55px; }
-.button-b { top: 160px; left: 25px; }
-.button-x { top: 100px; left: 25px; }
-.button-y { top: 130px; left: -5px; }
+.button-a, .button-b, .button-x, .button-y {
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+}
 
-.plus { top: 25px; left: 20px; width: 20px; height: 20px; font-size: 20px; line-height: 20px; }
-.home { bottom: 20px; right: 20px; width: 28px; height: 28px; border: 2px solid #555; }
-.r-button { top: 0; right: 0; width: 60px; height: 25px; border-radius: 10px 10px 0 0; }
-.zr-button { top: -10px; right: 0; width: 70px; height: 25px; border-radius: 10px 10px 0 0; background-color: #1a1a1a; z-index: 2; }
-.sl-button-right { top: 70px; left: -18px; width: 24px; height: 48px; border-radius: 12px 0 0 12px; }
-.sr-button-right { top: 150px; left: -18px; width: 24px; height: 48px; border-radius: 12px 0 0 12px; }
+.button-a { top: 148px; left: 90px; }
+.button-b { top: 184px; left: 60px; }
+.button-x { top: 112px; left: 60px; }
+.button-y { top: 148px; left: 30px; }
+
+.plus {
+  top: 32px;
+  left: 38px;
+  width: 26px;
+  height: 26px;
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.home {
+  bottom: 76px;
+  right: 38px;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #4f5259;
+  background: radial-gradient(circle at 40% 40%, #1f2024 0%, #07080b 85%);
+}
+
+.r-button {
+  top: 4px;
+  right: 10px;
+  width: 68px;
+  height: 26px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, #45474d 0%, #1f2025 100%);
+}
+
+.zr-button {
+  top: -12px;
+  right: 4px;
+  width: 80px;
+  height: 28px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1f2126 0%, #08090b 100%);
+  z-index: 4;
+}
+
+.strap-bar-right {
+  left: -34px;
+}
+
+.sl-button-right,
+.sr-button-right {
+  left: -20px;
+  border-radius: 14px 0 0 14px;
+}
+
+.sl-button-right { top: 102px; }
+.sr-button-right { top: 196px; }
 
 
 /* --- Mapping List Styles --- */
