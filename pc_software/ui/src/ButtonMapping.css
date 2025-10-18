@@ -27,12 +27,12 @@
 }
 
 .joycon-diagram-l {
-  background: linear-gradient(90deg, #ff5c46 0%, #ff4a38 79%, #2e3035 79%, #2e3035 100%);
+  background: linear-gradient(90deg, #00a8ff 0%, #00c6ff 79%, #2e3035 79%, #2e3035 100%);
   border-radius: 60px 24px 24px 60px;
 }
 
 .joycon-diagram-r {
-  background: linear-gradient(90deg, #2e3035 0%, #2e3035 21%, #00a8ff 21%, #00c6ff 100%);
+  background: linear-gradient(90deg, #2e3035 0%, #2e3035 21%, #ff5c46 21%, #ff4a38 100%);
   border-radius: 24px 60px 60px 24px;
 }
 
@@ -108,7 +108,7 @@
 .arrow-right { top: 182px; left: 72px; }
 
 .minus {
-  top: 32px;
+  top: 6px;
   right: 38px;
   width: 26px;
   height: 26px;
@@ -117,8 +117,8 @@
 }
 
 .capture {
-  bottom: 68px;
-  left: 46px;
+  bottom: 72px;
+  left: 79px;
   width: 22px;
   height: 22px;
   border-radius: 4px;
@@ -167,7 +167,7 @@
 
 .sl-button-left,
 .sr-button-left {
-  right: -20px;
+  right: -30px;
   border-radius: 0 14px 14px 0;
 }
 
@@ -188,7 +188,7 @@
 .button-y { top: 148px; left: 30px; }
 
 .plus {
-  top: 32px;
+  top: 6px;
   left: 38px;
   width: 26px;
   height: 26px;
@@ -197,8 +197,8 @@
 }
 
 .home {
-  bottom: 76px;
-  right: 38px;
+  bottom: 72px;
+  right: 71px;
   width: 30px;
   height: 30px;
   border: 2px solid #4f5259;
@@ -230,7 +230,7 @@
 
 .sl-button-right,
 .sr-button-right {
-  left: -20px;
+  left: -30px;
   border-radius: 14px 0 0 14px;
 }
 

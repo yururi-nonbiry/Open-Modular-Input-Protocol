@@ -19,8 +19,9 @@ import omip_pb2
 # --- 定数 ---
 BAUDRATE = 115200
 MAPPING_FILE = "joycon_mapping.json"
+JOYCON_SCAN_INTERVAL = 2  # Joy-Conをスキャンする間隔（秒）
 
-# --- pynput --- 
+# --- pynput ---
 keyboard = Controller()
 
 # 文字列をpynputのKeyオブジェクトに変換するためのマップ
@@ -93,7 +94,7 @@ class AppState:
 
 state = AppState()
 
-# --- FastAPI, Socket.IO --- 
+# --- FastAPI, Socket.IO ---
 app = FastAPI()
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
@@ -116,11 +117,7 @@ def save_mapping():
 @sio.event
 async def connect(sid, environ):
     print(f"Socket.IO client connected: {sid}")
-    devices_info = [
-        {"id": d['path'], "type": d['type'], "battery": d.get('last_battery_level', 0)}
-        for d in state.joycon_devices
-    ]
-    await sio.emit('joycon_devices', {'devices': devices_info}, to=sid)
+    await send_joycon_devices_update()
 
 @sio.on('load_joycon_mapping')
 async def load_joycon_mapping(sid, data):
@@ -136,95 +133,179 @@ async def save_joycon_mapping(sid, data):
         save_mapping()
         await sio.emit('joycon_mapping_saved', {'status': 'success'}, to=sid)
 
-# --- Joy-Con 関連 --- 
+# --- Joy-Con 関連 ---
 def send_joycon_subcommand(device, command, data):
-    payload = bytearray([0x01, state.global_packet_counter & 0xF])
-    payload.extend(NEUTRAL_RUMBLE_DATA)
-    payload.append(command)
-    payload.extend(data)
-    device['hid'].write(payload)
-    state.global_packet_counter = (state.global_packet_counter + 1) % 16
-
-async def joycon_reader_task():
-    print("Starting Joy-Con detection...")
     try:
-        joycon_infos = [dev for dev in hid.enumerate() if dev['vendor_id'] == NINTENDO_VID and dev['product_id'] in [JOYCON_L_PID, JOYCON_R_PID]]
-        if not joycon_infos:
-            await sio.emit('joycon_devices', {'devices': []})
-            return
+        payload = bytearray([0x01, state.global_packet_counter & 0xF])
+        payload.extend(NEUTRAL_RUMBLE_DATA)
+        payload.append(command)
+        payload.extend(data)
+        device['hid'].write(payload)
+        state.global_packet_counter = (state.global_packet_counter + 1) % 16
+    except OSError as e:
+        print(f"Error sending subcommand to {device['path']}: {e}")
+        # ここでデバイスの切断処理を呼び出す
+        asyncio.create_task(handle_joycon_disconnection(device['path']))
 
-        for info in joycon_infos:
-            try:
-                dev = hid.device()
-                dev.open_path(info['path'])
-                dev.set_nonblocking(1)
-                dev_type = 'L' if info['product_id'] == JOYCON_L_PID else 'R'
-                device_path = info['path']
-                # hid.enumerate()が返すpathはbytesの場合があるので、strに変換する
-                if isinstance(device_path, bytes):
-                    device_path = device_path.decode('utf-8')
-                device_obj = {'type': dev_type, 'hid': dev, 'path': device_path, 'last_battery_level': -1, 'last_button_state': {}}
-                state.joycon_devices.append(device_obj)
-                send_joycon_subcommand(device_obj, 0x03, b'\x30')
-            except Exception as e:
-                print(f"Failed to open Joy-Con {info['path']}: {e}")
 
-        devices_info = [{"id": d['path'], "type": d['type'], "battery": 0} for d in state.joycon_devices]
-        await sio.emit('joycon_devices', {'devices': devices_info})
+async def send_joycon_devices_update():
+    """接続されているJoy-ConのリストをUIに送信する"""
+    devices_info = [
+        {"id": d['path'], "type": d['type'], "battery": d.get('last_battery_level', 0)}
+        for d in state.joycon_devices
+    ]
+    await sio.emit('joycon_devices', {'devices': devices_info})
 
-        while True:
-            for dev_info in state.joycon_devices:
-                report = dev_info['hid'].read(64)
-                if not (report and report[0] == 0x30): continue
+async def handle_joycon_disconnection(device_path):
+    """Joy-Conの切断を処理する"""
+    device_to_remove = next((d for d in state.joycon_devices if d['path'] == device_path), None)
+    if device_to_remove:
+        print(f"Joy-Con disconnected: {device_path}")
+        try:
+            device_to_remove['hid'].close()
+        except Exception as e:
+            print(f"Error closing HID device for {device_path}: {e}")
+        state.joycon_devices.remove(device_to_remove)
+        await send_joycon_devices_update()
 
-                # --- ボタン解析 ---
-                current_buttons = {}
-                byte3, byte4, byte5 = report[3], report[4], report[5]
-                MAPPING = LEFT_MAPPING if dev_info['type'] == 'L' else RIGHT_MAPPING
-                for mask, name in MAPPING.items():
-                    if (byte5 if dev_info['type'] == 'L' else byte3) & mask: current_buttons[name] = True
-                for mask, name in SHARED_MAPPING.items():
-                    if byte4 & mask: current_buttons[name] = True
+async def scan_and_manage_joycons():
+    """Joy-Conを定期的にスキャンし、接続と切断を管理する"""
+    print("Starting Joy-Con detection...")
+    last_scan_time = 0
+
+    while True:
+        try:
+            # --- 定期スキャン ---
+            if time.time() - last_scan_time > JOYCON_SCAN_INTERVAL:
+                last_scan_time = time.time()
                 
-                last_state = dev_info['last_button_state']
-                pressed = {name for name in current_buttons if name not in last_state}
-                released = {name for name in last_state if name not in current_buttons}
-                dev_info['last_button_state'] = current_buttons
+                # 現在接続されているデバイスのパスリスト
+                connected_paths = [d['path'] for d in state.joycon_devices]
+                
+                # HIDデバイスを列挙
+                try:
+                    all_joycon_infos = [
+                        dev for dev in hid.enumerate() 
+                        if dev['vendor_id'] == NINTENDO_VID and dev['product_id'] in [JOYCON_L_PID, JOYCON_R_PID]
+                    ]
+                    found_paths = [info['path'].decode('utf-8') if isinstance(info['path'], bytes) else info['path'] for info in all_joycon_infos]
+                except hid.HIDException as e:
+                    print(f"HID enumeration failed: {e}")
+                    all_joycon_infos = []
+                    found_paths = []
 
-                # --- キーマッピング実行 ---
-                device_mapping = state.joycon_mapping.get(dev_info['path'], {})
-                for button in pressed:
-                    key_string = device_mapping.get(button)
-                    if key_string:
-                        key_to_press = get_key(key_string)
-                        keyboard.press(key_to_press)
-                for button in released:
-                    key_string = device_mapping.get(button)
-                    if key_string:
-                        key_to_release = get_key(key_string)
-                        keyboard.release(key_to_release)
 
-                # --- UIへ更新通知 (ボタン) ---
-                if pressed or released:
-                    await sio.emit('joycon_update', {'id': dev_info['path'], 'type': 'input', 'buttons': current_buttons})
+                # --- 新規接続の処理 ---
+                for info in all_joycon_infos:
+                    device_path = info['path'].decode('utf-8') if isinstance(info['path'], bytes) else info['path']
+                    if device_path not in connected_paths:
+                        print(f"New Joy-Con detected: {device_path}")
+                        try:
+                            dev = hid.device()
+                            dev.open_path(info['path'])
+                            dev.set_nonblocking(1)
+                            dev_type = 'L' if info['product_id'] == JOYCON_L_PID else 'R'
+                            
+                            device_obj = {
+                                'type': dev_type, 
+                                'hid': dev, 
+                                'path': device_path, 
+                                'last_battery_level': -1, 
+                                'last_button_state': {}
+                            }
+                            state.joycon_devices.append(device_obj)
+                            send_joycon_subcommand(device_obj, 0x03, b'\x30') # 30Hzレポートモードに設定
+                            await send_joycon_devices_update()
+                        except (OSError, hid.HIDException) as e:
+                            print(f"Failed to open new Joy-Con {device_path}: {e}")
+
+                # --- 切断の処理 ---
+                disconnected_paths = [path for path in connected_paths if path not in found_paths]
+                for path in disconnected_paths:
+                    await handle_joycon_disconnection(path)
+
+            # --- 既存デバイスの入力読み取り ---
+            if not state.joycon_devices:
+                # 接続されているデバイスがない場合は、スキャン間隔を待つ
+                await asyncio.sleep(JOYCON_SCAN_INTERVAL)
+                continue
+
+            for dev_info in list(state.joycon_devices): # リストのコピーをイテレート
+                try:
+                    report = dev_info['hid'].read(64)
+                    if not report:
+                        continue
+
+                    # --- ボタン解析 ---
+                    if report[0] == 0x30:
+                        current_buttons = {}
+                        byte3, byte4, byte5 = report[3], report[4], report[5]
+                        MAPPING = LEFT_MAPPING if dev_info['type'] == 'L' else RIGHT_MAPPING
+                        for mask, name in MAPPING.items():
+                            if (byte5 if dev_info['type'] == 'L' else byte3) & mask: current_buttons[name] = True
+                        for mask, name in SHARED_MAPPING.items():
+                            if byte4 & mask: current_buttons[name] = True
+                        
+                        last_state = dev_info['last_button_state']
+                        pressed = {name for name in current_buttons if name not in last_state}
+                        released = {name for name in last_state if name not in current_buttons}
+                        dev_info['last_button_state'] = current_buttons
+
+                        # --- キーマッピング実行 ---
+                        device_mapping = state.joycon_mapping.get(dev_info['path'], {})
+                        for button in pressed:
+                            key_string = device_mapping.get(button)
+                            if key_string:
+                                key_to_press = get_key(key_string)
+                                keyboard.press(key_to_press)
+                        for button in released:
+                            key_string = device_mapping.get(button)
+                            if key_string:
+                                key_to_release = get_key(key_string)
+                                keyboard.release(key_to_release)
+
+                        # --- UIへ更新通知 (ボタン) ---
+                        if pressed or released:
+                            await sio.emit('joycon_update', {'id': dev_info['path'], 'type': 'input', 'buttons': current_buttons})
+
+                except (OSError, hid.HIDException) as e:
+                    print(f"Error reading from Joy-Con {dev_info['path']}: {e}")
+                    await handle_joycon_disconnection(dev_info['path'])
+                except Exception as e:
+                    print(f"An unexpected error occurred with {dev_info['path']}: {e}")
+                    await handle_joycon_disconnection(dev_info['path'])
+
 
             await asyncio.sleep(0.008) # 約120Hzでポーリング
 
-    except (Exception, asyncio.CancelledError) as e:
-        print(f"Joy-Con task stopped: {e}")
-    finally:
-        for dev in state.joycon_devices:
+        except asyncio.CancelledError:
+            print("Joy-Con task cancelled.")
+            break
+        except Exception as e:
+            print(f"An error occurred in the Joy-Con management loop: {e}")
+            # エラーが発生した場合でも、ループを継続するために少し待つ
+            await asyncio.sleep(1)
+
+    print("Joy-Con task stopped.")
+    for dev in state.joycon_devices:
+        try:
             dev['hid'].close()
+        except Exception as e:
+            print(f"Error closing HID device on stop: {e}")
+
 
 # --- サーバー起動・メイン処理 ---
 @app.on_event("startup")
 async def startup_event():
     load_mapping()
-    state.joycon_reader_task = asyncio.create_task(joycon_reader_task())
+    # `joycon_reader_task` を `scan_and_manage_joycons` に置き換え
+    state.joycon_reader_task = asyncio.create_task(scan_and_manage_joycons())
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    if state.joycon_reader_task: state.joycon_reader_task.cancel()
+    if state.joycon_reader_task:
+        state.joycon_reader_task.cancel()
+        await state.joycon_reader_task # キャンセルが完了するのを待つ
 
 if __name__ == "__main__":
     uvicorn.run(socket_app, host="127.0.0.1", port=8000)
