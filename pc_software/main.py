@@ -216,7 +216,7 @@ async def scan_and_manage_joycons():
                                 'type': dev_type,
                                 'hid': dev,
                                 'path': device_path,
-                                'last_battery_level': -1,
+                                'last_battery_level': 10, # 初回更新を強制するため範囲外の値に設定
                                 'last_button_state': {}
                             }
                             state.joycon_devices.append(device_obj)
@@ -238,6 +238,20 @@ async def scan_and_manage_joycons():
                 try:
                     report = dev_info['hid'].read(64)
                     if not (report and report[0] == 0x30): continue
+
+                    # --- バッテリー残量解析 ---
+                    battery_info = report[2]
+                    battery_level = battery_info >> 4
+                    last_batt = dev_info.get('last_battery_level', -1)
+                    if battery_level != last_batt:
+                        dev_info['last_battery_level'] = battery_level
+                        await sio.emit('joycon_update', {
+                            'id': dev_info['path'], 
+                            'type': 'battery', 
+                            'level': battery_level, 
+                            'charging': (battery_info & 0x10) > 0
+                        })
+                        await send_joycon_devices_update() # デバイスリストも更新
 
                     # --- ボタン解析 ---
                     current_buttons = {}
