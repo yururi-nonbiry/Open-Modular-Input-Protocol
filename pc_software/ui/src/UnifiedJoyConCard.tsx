@@ -38,7 +38,10 @@ const UnifiedJoyConCard: React.FC<UnifiedJoyConCardProps> = ({ allJoyCons }) => 
           <span>Joy-Con</span>
         </div>
         <div className="card-content">
-          <div className="joycon-diagram-container-unified">
+          <div 
+            className="joycon-diagram-container-unified"
+            style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: '40px', width: '100%' }}
+          >
             {joyConL ? (
               <JoyConDiagram type="L" pressedButtons={joyConL.buttons || {}} />
             ) : (

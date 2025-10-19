@@ -167,6 +167,7 @@ main {
 /* Styles for Settings Tabs */
 .settings-tabs {
   display: flex;
+  flex-direction: row;
   border-bottom: 1px solid #444;
   margin-bottom: 20px;
 }
@@ -383,4 +384,8 @@ body[data-theme='light'] .analog-bar-container span {
 body[data-theme='light'] .device-card.active {
   border: 2px solid #007bff;
   box-shadow: 0 0 15px #007bff88;
+}
+
+.joycon-card-unified {
+  grid-column: 1 / -1;
 }
