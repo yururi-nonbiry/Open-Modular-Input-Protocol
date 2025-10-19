@@ -51,6 +51,7 @@ const stickModes = [
   { value: 'none', label: 'なし' },
   { value: 'mouse', label: 'マウスカーソル' },
   { value: '8way', label: '8方向キー' },
+  { value: 'dial', label: 'ダイヤル' },
 ];
 
 
@@ -114,6 +115,11 @@ const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMappin
           mode: '8way',
           mappings: currentConfig.mappings || {},
         };
+      } else if (newMode === 'dial') {
+        newMapping[button] = {
+          mode: 'dial',
+          dials: currentConfig.dials || {},
+        };
       } else {
         newMapping[button] = { mode: 'none' };
       }
@@ -146,7 +152,7 @@ const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMappin
               <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
-          {(config.mode === 'mouse' || config.mode === '8way') && (
+          {(config.mode === 'mouse' || config.mode === '8way' || config.mode === 'dial') && (
             <button className="details-button" onClick={() => onOpenStickSettings(button as 'stick_l' | 'stick_r')}>
               詳細設定
             </button>

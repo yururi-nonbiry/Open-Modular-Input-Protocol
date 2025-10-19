@@ -81,3 +81,34 @@
   grid-column: 2;
   grid-row: 2;
 }
+
+.dial-mapping {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.dial-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dial-dir {
+  width: 80px;
+  font-weight: bold;
+}
+
+.dial-inputs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dial-inputs label {
+  font-size: 0.8em;
+}
+
+.dial-inputs input {
+  width: 60px;
+}

@@ -66,6 +66,45 @@ const StickSettingsModal: React.FC<StickSettingsModalProps> = ({ isOpen, onClose
           </div>
         )}
 
+        {stickConfig.mode === 'dial' && (
+          <div className="setting-item">
+            <h4>ダイヤルマッピング</h4>
+            <div className="dial-mapping">
+              {['up', 'down', 'left', 'right'].map(dir => (
+                <div key={dir} className="dial-row">
+                  <label className="dial-dir">{dir}</label>
+                  <div className="dial-inputs">
+                    <label>Increase</label>
+                    <input
+                      type="text"
+                      value={stickConfig.dials?.[dir]?.increase || ''}
+                      onChange={(e) => {
+                        const newDials = { 
+                          ...stickConfig.dials, 
+                          [dir]: { ...stickConfig.dials?.[dir], increase: e.target.value }
+                        };
+                        onConfigChange({ ...stickConfig, dials: newDials });
+                      }}
+                    />
+                    <label>Decrease</label>
+                    <input
+                      type="text"
+                      value={stickConfig.dials?.[dir]?.decrease || ''}
+                      onChange={(e) => {
+                        const newDials = { 
+                          ...stickConfig.dials, 
+                          [dir]: { ...stickConfig.dials?.[dir], decrease: e.target.value }
+                        };
+                        onConfigChange({ ...stickConfig, dials: newDials });
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 他のモード（例：スクロール）の設定項目を将来的にここに追加できる */}
 
         <div className="modal-actions">

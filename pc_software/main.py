@@ -218,7 +218,9 @@ async def scan_and_manage_joycons():
                                 'path': device_path,
                                 'last_battery_level': 10, # 初回更新を強制するため範囲外の値に設定
                                 'last_button_state': {},
-                                'last_stick_direction': None
+                                'last_stick_direction': None,
+                                'last_stick_angle': 0,
+                                'last_stick_sector': None
                             }
                             state.joycon_devices.append(device_obj)
                             send_joycon_subcommand(device_obj, 0x03, b'\x30')
@@ -350,6 +352,63 @@ async def scan_and_manage_joycons():
                                 keyboard.press(key_to_press)
                             
                             dev_info['last_stick_direction'] = direction
+
+                    elif stick_mode == 'dial':
+                        if dev_info['type'] == 'L':
+                            x_raw = report[6] | ((report[7] & 0x0F) << 8)
+                            y_raw = (report[7] >> 4) | (report[8] << 4)
+                        else: # 'R'
+                            x_raw = report[9] | ((report[10] & 0x0F) << 8)
+                            y_raw = (report[10] >> 4) | (report[11] << 4)
+
+                        dx, dy = process_stick_input(x_raw, y_raw)
+                        
+                        magnitude = math.sqrt(dx*dx + dy*dy)
+                        
+                        if magnitude < 0.1: # Deadzone
+                            dev_info['last_stick_sector'] = None
+                            continue
+
+                        angle = math.atan2(-dy, dx) # Y is inverted
+
+                        sector = None
+                        if math.pi / 4 <= angle < 3 * math.pi / 4:
+                            sector = 'up'
+                        elif -3 * math.pi / 4 <= angle < -math.pi / 4:
+                            sector = 'down'
+                        elif -math.pi / 4 <= angle < math.pi / 4:
+                            sector = 'right'
+                        else:
+                            sector = 'left'
+
+                        last_sector = dev_info.get('last_stick_sector')
+                        last_angle = dev_info.get('last_stick_angle', 0)
+
+                        if sector != last_sector:
+                            dev_info['last_stick_sector'] = sector
+                            dev_info['last_stick_angle'] = angle
+                        else:
+                            delta_angle = angle - last_angle
+                            # Handle angle wrapping
+                            if delta_angle > math.pi: delta_angle -= 2 * math.pi
+                            if delta_angle < -math.pi: delta_angle += 2 * math.pi
+
+                            rotation_threshold = 0.2 # Radians
+
+                            dials = stick_config.get('dials', {})
+                            dial_mapping = dials.get(sector)
+
+                            if dial_mapping:
+                                if delta_angle > rotation_threshold:
+                                    key_to_press = get_key(dial_mapping['increase'])
+                                    keyboard.press(key_to_press)
+                                    keyboard.release(key_to_press)
+                                    dev_info['last_stick_angle'] = angle
+                                elif delta_angle < -rotation_threshold:
+                                    key_to_press = get_key(dial_mapping['decrease'])
+                                    keyboard.press(key_to_press)
+                                    keyboard.release(key_to_press)
+                                    dev_info['last_stick_angle'] = angle
 
 
                     # --- UIへ更新通知 (ボタン) ---
