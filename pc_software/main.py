@@ -217,7 +217,8 @@ async def scan_and_manage_joycons():
                                 'hid': dev,
                                 'path': device_path,
                                 'last_battery_level': 10, # 初回更新を強制するため範囲外の値に設定
-                                'last_button_state': {}
+                                'last_button_state': {},
+                                'last_stick_direction': None
                             }
                             state.joycon_devices.append(device_obj)
                             send_joycon_subcommand(device_obj, 0x03, b'\x30')
@@ -307,6 +308,48 @@ async def scan_and_manage_joycons():
                         
                         # Y軸の値を反転させる（Joy-Conの上方向は値が小さい）
                         mouse.move(dx * sensitivity, -dy * sensitivity)
+                    
+                    elif stick_mode == '8way':
+                        if dev_info['type'] == 'L':
+                            x_raw = report[6] | ((report[7] & 0x0F) << 8)
+                            y_raw = (report[7] >> 4) | (report[8] << 4)
+                        else: # 'R'
+                            x_raw = report[9] | ((report[10] & 0x0F) << 8)
+                            y_raw = (report[10] >> 4) | (report[11] << 4)
+
+                        dx, dy = process_stick_input(x_raw, y_raw)
+                        
+                        # Y軸を反転
+                        dy = -dy
+
+                        direction = None
+                        threshold = 0.5
+                        if dy > threshold:
+                            if dx > threshold: direction = 'up_right'
+                            elif dx < -threshold: direction = 'up_left'
+                            else: direction = 'up'
+                        elif dy < -threshold:
+                            if dx > threshold: direction = 'down_right'
+                            elif dx < -threshold: direction = 'down_left'
+                            else: direction = 'down'
+                        elif dx > threshold: direction = 'right'
+                        elif dx < -threshold: direction = 'left'
+
+                        last_direction = dev_info.get('last_stick_direction')
+                        if direction != last_direction:
+                            mappings = stick_config.get('mappings', {})
+                            
+                            # Release previous key
+                            if last_direction and last_direction in mappings:
+                                key_to_release = get_key(mappings[last_direction])
+                                keyboard.release(key_to_release)
+                            
+                            # Press new key
+                            if direction and direction in mappings:
+                                key_to_press = get_key(mappings[direction])
+                                keyboard.press(key_to_press)
+                            
+                            dev_info['last_stick_direction'] = direction
 
 
                     # --- UIへ更新通知 (ボタン) ---

@@ -42,6 +42,30 @@ const StickSettingsModal: React.FC<StickSettingsModalProps> = ({ isOpen, onClose
           </div>
         )}
 
+        {stickConfig.mode === '8way' && (
+          <div className="setting-item">
+            <h4>8方向キーマッピング</h4>
+            <div className="eight-way-grid">
+              {[ 'up_left', 'up', 'up_right', 'left', 'center', 'right', 'down_left', 'down', 'down_right'].map(dir => {
+                if (dir === 'center') return <div key={dir} className="grid-center"></div>;
+                return (
+                  <div key={dir} className="grid-item">
+                    <label>{dir}</label>
+                    <input
+                      type="text"
+                      value={stickConfig.mappings?.[dir] || ''}
+                      onChange={(e) => {
+                        const newMappings = { ...stickConfig.mappings, [dir]: e.target.value };
+                        onConfigChange({ ...stickConfig, mappings: newMappings });
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* 他のモード（例：スクロール）の設定項目を将来的にここに追加できる */}
 
         <div className="modal-actions">

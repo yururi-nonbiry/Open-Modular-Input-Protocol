@@ -50,6 +50,7 @@ const joyConRButtons = [
 const stickModes = [
   { value: 'none', label: 'なし' },
   { value: 'mouse', label: 'マウスカーソル' },
+  { value: '8way', label: '8方向キー' },
 ];
 
 
@@ -108,6 +109,11 @@ const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMappin
           mode: 'mouse',
           sensitivity: currentConfig.sensitivity || 50, // デフォルト感度
         };
+      } else if (newMode === '8way') {
+        newMapping[button] = {
+          mode: '8way',
+          mappings: currentConfig.mappings || {},
+        };
       } else {
         newMapping[button] = { mode: 'none' };
       }
@@ -140,7 +146,7 @@ const ButtonMapping: React.FC<ButtonMappingProps> = ({ deviceType, initialMappin
               <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
-          {config.mode === 'mouse' && (
+          {(config.mode === 'mouse' || config.mode === '8way') && (
             <button className="details-button" onClick={() => onOpenStickSettings(button as 'stick_l' | 'stick_r')}>
               詳細設定
             </button>
