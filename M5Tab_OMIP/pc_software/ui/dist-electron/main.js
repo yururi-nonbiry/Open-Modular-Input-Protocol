@@ -1,292 +1,185 @@
-import { app, BrowserWindow, ipcMain, nativeImage } from "electron";
-import path from "node:path";
-import fs from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
-import readline from "node:readline";
-import { randomUUID } from "node:crypto";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-process.env.DIST = path.join(__dirname, "../dist");
-process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL ? path.join(process.env.DIST, "../public") : process.env.DIST;
-let win;
-let pythonProcess = null;
-let stdoutReader = null;
-const pendingResponses = /* @__PURE__ */ new Map();
-const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
-const ICON_TARGET_SIZE = 160;
-let iconStorageDir = null;
-function createWindow() {
-  win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+import { app as p, BrowserWindow as I, ipcMain as d, nativeImage as P } from "electron";
+import i from "node:path";
+import h from "node:fs/promises";
+import { fileURLToPath as R } from "node:url";
+import { spawn as U } from "node:child_process";
+import $ from "node:readline";
+import { randomUUID as T } from "node:crypto";
+const N = R(import.meta.url), _ = i.dirname(N);
+process.env.DIST = i.join(_, "../dist");
+process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL ? i.join(process.env.DIST, "../public") : process.env.DIST;
+let c, a = null, u = null;
+const g = /* @__PURE__ */ new Map(), S = process.env.VITE_DEV_SERVER_URL, k = 160;
+let y = null;
+function D() {
+  c = new I({
+    icon: i.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
+      preload: i.join(_, "preload.js"),
+      contextIsolation: !0,
       // Recommended for security
-      nodeIntegration: false
+      nodeIntegration: !1
       // Recommended for security
     }
-  });
-  win.webContents.on("did-finish-load", () => {
-    win?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-    win.webContents.openDevTools();
-  } else {
-    win.loadFile(path.join(process.env.DIST, "index.html"));
-  }
+  }), c.webContents.on("did-finish-load", () => {
+    c?.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  }), S ? (c.loadURL(S), c.webContents.openDevTools()) : c.loadFile(i.join(process.env.DIST, "index.html"));
 }
-function startPythonBackend() {
-  const pythonExecutable = path.join(__dirname, "../../venv/Scripts/python.exe");
-  const backendScript = path.join(__dirname, "../../backend.py");
-  pythonProcess = spawn(pythonExecutable, [backendScript]);
-  if (!pythonProcess.stdout || !pythonProcess.stdin) {
-    const message = "Failed to establish pipes for Python backend.";
-    console.error(message);
-    rejectAllPending(message);
-    pythonProcess.kill();
-    pythonProcess = null;
+function V() {
+  const n = i.join(_, "../../venv/Scripts/python.exe"), t = i.join(_, "../../backend.py");
+  if (a = U(n, [t]), !a.stdout || !a.stdin) {
+    const e = "Failed to establish pipes for Python backend.";
+    console.error(e), b(e), a.kill(), a = null;
     return;
   }
-  stdoutReader = readline.createInterface({ input: pythonProcess.stdout });
-  stdoutReader.on("line", (line) => {
-    const trimmed = line.trim();
-    if (trimmed.length > 0) {
-      handleBackendMessage(trimmed);
-    }
-  });
-  stdoutReader.on("error", (err) => {
-    console.error("Failed to read Python stdout:", err);
-    win?.webContents.send("from-backend-error", `Stdout error: ${err instanceof Error ? err.message : String(err)}`);
-  });
-  pythonProcess.stderr?.setEncoding("utf8");
-  pythonProcess.stderr?.on("data", (data) => {
-    console.error(`Python stderr: ${data}`);
-    win?.webContents.send("from-backend-error", data.toString());
-  });
-  pythonProcess.on("close", (code, signal) => {
-    console.log(`Python process closed (code=${code}, signal=${signal ?? "n/a"})`);
-    stdoutReader?.close();
-    stdoutReader = null;
-    rejectAllPending(`Python process closed (code=${code}, signal=${signal ?? "n/a"})`);
-    pythonProcess = null;
-  });
-  pythonProcess.on("error", (error) => {
-    console.error("Failed to launch Python backend:", error);
-    win?.webContents.send("from-backend-error", `Python spawn error: ${error instanceof Error ? error.message : String(error)}`);
-    stdoutReader?.close();
-    stdoutReader = null;
-    rejectAllPending(`Python backend launch error: ${error instanceof Error ? error.message : String(error)}`);
-    pythonProcess = null;
+  u = $.createInterface({ input: a.stdout }), u.on("line", (e) => {
+    const o = e.trim();
+    o.length > 0 && B(o);
+  }), u.on("error", (e) => {
+    console.error("Failed to read Python stdout:", e), c?.webContents.send("from-backend-error", `Stdout error: ${e instanceof Error ? e.message : String(e)}`);
+  }), a.stderr?.setEncoding("utf8"), a.stderr?.on("data", (e) => {
+    console.error(`Python stderr: ${e}`), c?.webContents.send("from-backend-error", e.toString());
+  }), a.on("close", (e, o) => {
+    console.log(`Python process closed (code=${e}, signal=${o ?? "n/a"})`), u?.close(), u = null, b(`Python process closed (code=${e}, signal=${o ?? "n/a"})`), a = null;
+  }), a.on("error", (e) => {
+    console.error("Failed to launch Python backend:", e), c?.webContents.send("from-backend-error", `Python spawn error: ${e instanceof Error ? e.message : String(e)}`), u?.close(), u = null, b(`Python backend launch error: ${e instanceof Error ? e.message : String(e)}`), a = null;
   });
 }
-function sendToPython(command) {
-  if (!pythonProcess || !pythonProcess.stdin) {
+function E(n) {
+  if (!a || !a.stdin)
     throw new Error("Python process not running.");
-  }
-  pythonProcess.stdin.write(JSON.stringify(command) + "\n");
+  a.stdin.write(JSON.stringify(n) + `
+`);
 }
-function handleBackendMessage(raw) {
-  win?.webContents.send("from-backend", raw);
-  let parsed;
+function B(n) {
+  c?.webContents.send("from-backend", n);
+  let t;
   try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    console.warn("Failed to parse backend message as JSON:", raw, error);
+    t = JSON.parse(n);
+  } catch (e) {
+    console.warn("Failed to parse backend message as JSON:", n, e);
     return;
   }
-  if (parsed.command) {
-    fulfillPendingResponse(parsed);
-  }
+  t.command && L(t);
 }
-function fulfillPendingResponse(response) {
-  if (!response.command) {
+function L(n) {
+  if (!n.command)
     return;
-  }
-  const queue = pendingResponses.get(response.command);
-  if (!queue?.length) {
+  const t = g.get(n.command);
+  if (!t?.length)
     return;
-  }
-  const { resolve, reject } = queue.shift();
-  if (response.status && response.status !== "success") {
-    const message = typeof response.message === "string" ? response.message : `Backend command "${response.command}" failed`;
-    reject(new Error(message));
-  } else {
-    resolve(response);
-  }
-  if (queue.length === 0) {
-    pendingResponses.delete(response.command);
-  }
+  const { resolve: e, reject: o } = t.shift();
+  if (n.status && n.status !== "success") {
+    const r = typeof n.message == "string" ? n.message : `Backend command "${n.command}" failed`;
+    o(new Error(r));
+  } else
+    e(n);
+  t.length === 0 && g.delete(n.command);
 }
-function rejectAllPending(message) {
-  for (const queue of pendingResponses.values()) {
-    for (const pending of queue) {
-      pending.reject(new Error(message));
-    }
-  }
-  pendingResponses.clear();
+function b(n) {
+  for (const t of g.values())
+    for (const e of t)
+      e.reject(new Error(n));
+  g.clear();
 }
-function requestBackend(payload, expectedCommand) {
-  return new Promise((resolve, reject) => {
-    if (!pythonProcess) {
-      reject(new Error("Python process not running."));
+function w(n, t) {
+  return new Promise((e, o) => {
+    if (!a) {
+      o(new Error("Python process not running."));
       return;
     }
-    const queue = pendingResponses.get(expectedCommand) ?? [];
-    const pending = {
-      resolve: (response) => resolve(response),
-      reject
+    const r = g.get(t) ?? [], l = {
+      resolve: (f) => e(f),
+      reject: o
     };
-    queue.push(pending);
-    pendingResponses.set(expectedCommand, queue);
+    r.push(l), g.set(t, r);
     try {
-      sendToPython(payload);
-    } catch (error) {
-      queue.pop();
-      if (queue.length === 0) {
-        pendingResponses.delete(expectedCommand);
-      } else {
-        pendingResponses.set(expectedCommand, queue);
-      }
-      reject(error);
+      E(n);
+    } catch (f) {
+      r.pop(), r.length === 0 ? g.delete(t) : g.set(t, r), o(f);
     }
   });
 }
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    if (pythonProcess) {
-      pythonProcess.kill();
-    }
-    app.quit();
-    win = null;
-  }
+p.on("window-all-closed", () => {
+  process.platform !== "darwin" && (a && a.kill(), p.quit(), c = null);
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+p.on("activate", () => {
+  I.getAllWindows().length === 0 && D();
 });
-app.whenReady().then(async () => {
-  startPythonBackend();
-  createWindow();
+p.whenReady().then(async () => {
+  V(), D();
   try {
-    iconStorageDir = path.join(app.getPath("userData"), "icons");
-    await fs.mkdir(iconStorageDir, { recursive: true });
-  } catch (error) {
-    console.error("Failed to prepare icon storage directory:", error);
-    iconStorageDir = null;
+    y = i.join(p.getPath("userData"), "icons"), await h.mkdir(y, { recursive: !0 });
+  } catch (n) {
+    console.error("Failed to prepare icon storage directory:", n), y = null;
   }
-  ipcMain.handle("serial:get_ports", async () => {
-    const response = await requestBackend({ type: "get_ports" }, "get_ports");
-    return Array.isArray(response.ports) ? response.ports : [];
-  });
-  ipcMain.handle("serial:connect", async (event, port) => {
-    await requestBackend({ type: "connect", port }, "connect");
-  });
-  ipcMain.handle("serial:disconnect", async () => {
-    await requestBackend({ type: "disconnect" }, "disconnect");
-  });
-  ipcMain.handle("config:get", async () => {
-    const response = await requestBackend({ type: "get_config" }, "get_config");
-    return response.config ?? {};
-  });
-  ipcMain.handle("config:save", async (event, config) => {
+  d.handle("serial:get_ports", async () => {
+    const n = await w({ type: "get_ports" }, "get_ports");
+    return Array.isArray(n.ports) ? n.ports : [];
+  }), d.handle("serial:connect", async (n, t) => {
+    await w({ type: "connect", port: t }, "connect");
+  }), d.handle("serial:disconnect", async () => {
+    await w({ type: "disconnect" }, "disconnect");
+  }), d.handle("config:get", async () => (await w({ type: "get_config" }, "get_config")).config ?? {}), d.handle("config:save", async (n, t) => {
     try {
-      sendToPython({ type: "save_config", config });
-    } catch (error) {
-      console.error("Failed to send save_config to backend", error);
-      throw error;
+      E({ type: "save_config", config: t });
+    } catch (e) {
+      throw console.error("Failed to send save_config to backend", e), e;
     }
-  });
-  ipcMain.handle("config:set_page", async (event, page) => {
+  }), d.handle("config:set_page", async (n, t) => {
     try {
-      sendToPython({ type: "set_page", page });
-    } catch (error) {
-      console.error("Failed to send set_page to backend", error);
-      throw error;
+      E({ type: "set_page", page: t });
+    } catch (e) {
+      throw console.error("Failed to send set_page to backend", e), e;
     }
-  });
-  ipcMain.handle("image:import_and_resize", async (_event, payload) => {
-    const sourcePath = typeof payload?.filePath === "string" && payload.filePath.length > 0 ? payload.filePath : null;
-    const sourceDataUrl = typeof payload?.dataUrl === "string" && payload.dataUrl.length > 0 ? payload.dataUrl : null;
-    if (!sourcePath && !sourceDataUrl) {
+  }), d.handle("image:import_and_resize", async (n, t) => {
+    const e = typeof t?.filePath == "string" && t.filePath.length > 0 ? t.filePath : null, o = typeof t?.dataUrl == "string" && t.dataUrl.length > 0 ? t.dataUrl : null;
+    if (!e && !o)
       throw new Error("No image data provided for import.");
-    }
-    let image = null;
-    if (sourcePath) {
+    let r = null;
+    if (e)
       try {
-        const fileBuffer = await fs.readFile(sourcePath);
-        image = nativeImage.createFromBuffer(fileBuffer);
-      } catch (error) {
-        console.warn(`Failed to load image from file path (${sourcePath}):`, error);
+        const m = await h.readFile(e);
+        r = P.createFromBuffer(m);
+      } catch (m) {
+        console.warn(`Failed to load image from file path (${e}):`, m);
       }
-    }
-    if ((!image || image.isEmpty()) && sourceDataUrl) {
-      image = nativeImage.createFromDataURL(sourceDataUrl);
-    }
-    if (!image || image.isEmpty()) {
+    if ((!r || r.isEmpty()) && o && (r = P.createFromDataURL(o)), !r || r.isEmpty())
       throw new Error("Failed to load source image.");
-    }
-    const resized = image.resize({ width: ICON_TARGET_SIZE, height: ICON_TARGET_SIZE, quality: "best" });
-    if (resized.isEmpty()) {
+    const l = r.resize({ width: k, height: k, quality: "best" });
+    if (l.isEmpty())
       throw new Error("Failed to resize image.");
-    }
-    const jpegBuffer = resized.toJPEG(90);
-    const targetDir = iconStorageDir ?? path.join(app.getPath("userData"), "icons");
+    const f = l.toJPEG(90), s = y ?? i.join(p.getPath("userData"), "icons");
     try {
-      await fs.mkdir(targetDir, { recursive: true });
-    } catch (error) {
-      console.warn("Failed to ensure icon storage directory exists:", error);
+      await h.mkdir(s, { recursive: !0 });
+    } catch (m) {
+      console.warn("Failed to ensure icon storage directory exists:", m);
     }
-    const fileName = `icon-${Date.now()}-${randomUUID()}.jpg`;
-    const storedPath = path.join(targetDir, fileName);
-    await fs.writeFile(storedPath, jpegBuffer);
-    const resizedDataUrl = `data:image/jpeg;base64,${jpegBuffer.toString("base64")}`;
-    return { storedPath, dataUrl: resizedDataUrl };
-  });
-  ipcMain.handle("image:get_base64", async (_event, filePath) => {
+    const F = `icon-${Date.now()}-${T()}.jpg`, v = i.join(s, F);
+    await h.writeFile(v, f);
+    const j = `data:image/jpeg;base64,${f.toString("base64")}`;
+    return { storedPath: v, dataUrl: j };
+  }), d.handle("image:get_base64", async (n, t) => {
     try {
-      if (!filePath) {
+      if (!t)
         return null;
-      }
-      if (filePath.startsWith("data:")) {
-        return filePath;
-      }
-      const data = await fs.readFile(filePath);
-      const ext = path.extname(filePath).toLowerCase().substring(1);
-      const mappedExt = ext === "jpg" ? "jpeg" : ext;
-      const mimeType = mappedExt ? `image/${mappedExt}` : "image/png";
-      return `data:${mimeType};base64,${data.toString("base64")}`;
-    } catch (err) {
-      console.error(`Failed to read image file: ${filePath}`, err);
-      return null;
+      if (t.startsWith("data:"))
+        return t;
+      const e = await h.readFile(t), o = i.extname(t).toLowerCase().substring(1), r = o === "jpg" ? "jpeg" : o;
+      return `data:${r ? `image/${r}` : "image/png"};base64,${e.toString("base64")}`;
+    } catch (e) {
+      return console.error(`Failed to read image file: ${t}`, e), null;
     }
-  });
-  ipcMain.handle("image:upload", async (_event, payload) => {
-    const { screenId, page, filePath, dataUrl, clear } = payload ?? {};
-    if (typeof screenId !== "number" || Number.isNaN(screenId)) {
+  }), d.handle("image:upload", async (n, t) => {
+    const { screenId: e, page: o, filePath: r, dataUrl: l, clear: f } = t ?? {};
+    if (typeof e != "number" || Number.isNaN(e))
       throw new Error("screenId is required for image upload.");
-    }
-    const command = {
+    const s = {
       type: "send_image",
-      screen_id: screenId
+      screen_id: e
     };
-    if (typeof page === "number" && !Number.isNaN(page)) {
-      command.page = page;
-    }
-    if (filePath && path.isAbsolute(filePath)) {
-      command.file_path = filePath;
-    }
-    if (clear === true) {
-      command.clear = true;
-    }
-    if (!command.file_path && !command.clear && typeof dataUrl === "string" && dataUrl.length > 0) {
-      command.data_url = dataUrl;
-    }
-    if (!command.file_path && !command.data_url && !command.clear) {
+    if (typeof o == "number" && !Number.isNaN(o) && (s.page = o), r && i.isAbsolute(r) && (s.file_path = r), f === !0 && (s.clear = !0), !s.file_path && !s.clear && typeof l == "string" && l.length > 0 && (s.data_url = l), !s.file_path && !s.data_url && !s.clear)
       throw new Error("No image data provided for upload.");
-    }
-    await requestBackend(command, "send_image");
+    await w(s, "send_image");
   });
 });

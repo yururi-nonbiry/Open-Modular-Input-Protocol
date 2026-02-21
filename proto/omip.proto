@@ -44,7 +44,10 @@ message FeedbackImage {
     JPEG = 1;
   }
   ImageFormat format = 3;
-  bytes image_data = 4;
+  uint32 total_size = 4;
+  uint32 chunk_offset = 5;
+  bytes chunk_data = 6;
+  bool is_last_chunk = 7;
 }
 
 message FeedbackLed {
