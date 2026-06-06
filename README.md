@@ -18,9 +18,7 @@ Open Modular Input Protocol (OMIP) は、自作の物理入力デバイス（ボ
     *   M5Stack社の `M5Tab` を、タッチスクリーン付きの多機能入力デバイス（ストリームデッキのようなもの）として活用するための総合的なプロジェクトです。
     *   **Firmware:** M5Tab上で動作し、タッチ入力をOMIPメッセージとして送信します。
     *   **PC Software:** PC上で動作するバックエンドとUI。デバイスからの入力を受け取ってPCのキー操作に変換したり、UIからアイコン画像をデバイスに送信したりします。
-*   **Joy-Con PC ユーティリティ (`pc_software/`)**
-    *   Nintendo SwitchのJoy-ConをPCに接続し、キーボードやマウスとして使用するためのユーティリティです。
-    *   **注:** このツールはOMIPとは直接関係なく、独立して動作します。
+
 *   **シンプルハブ実装例 (`firmware/master_hub/`)**
     *   基本的なボタンとアナログ入力を持つ、最小構成のOMIPデバイスのファームウェア実装例です。
 
@@ -101,34 +99,6 @@ PC側のバックエンドとUIを起動します。
 
     起動後、UIのホーム画面から「デバイスを追加」ボタンを押して、M5TabやJoy-Conなどのデバイスを登録します。登録したデバイスのカードをクリックすると、各デバイスの設定画面に遷移できます。M5Tabの設定画面では、デバイスが接続されているシリアルポートを選択して「Connect」ボタンを押すと、デバイスとの通信が開始されます。
 
-### 2. Joy-Con PC ユーティリティ
-
-Joy-ConをPCの入力デバイスとして活用するためのツールです。ボタンやスティックの入力を、キーボードショートカットやマウス操作に自由にマッピングできます。
-
-#### 実行方法
-
-1.  **Python環境のセットアップ:**
-    リポジトリのルートにある `pc_software/` ディレクトリで、仮想環境の作成と依存関係のインストールを行います。
-    ```shell
-    # Windows
-    cd pc_software
-    python -m venv venv
-    venv\Scripts\activate
-    pip install -r requirements.txt
-
-    # macOS / Linux
-    cd pc_software
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    ```
-
-2.  **アプリケーションの起動:**
-    `main.py` を実行すると、Webサーバーが起動します。
-    ```shell
-    python main.py
-    ```
-    ブラウザで `http://127.0.0.1:8000` にアクセスすると、接続されているJoy-Conの設定画面が表示されます。
 
 ---
 

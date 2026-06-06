@@ -18,9 +18,7 @@ This repository contains the OMIP specification definition, as well as concrete 
     *   A comprehensive project that transforms M5Stack's `M5Tab` into a multi-function input device with a touchscreen (similar to a Stream Deck).
     *   **Firmware:** Runs on the M5Tab and sends touch inputs as OMIP messages.
     *   **PC Software:** A backend and UI that run on the PC. It receives input from the device to trigger PC key presses and sends icon images from the UI to the device.
-*   **Joy-Con PC Utility (`pc_software/`)**
-    *   A utility for connecting Nintendo Switch Joy-Cons to a PC and using them as a keyboard or mouse.
-    *   **Note:** This tool is not directly related to OMIP and operates independently.
+
 *   **Simple Hub Example (`firmware/master_hub/`)**
     *   A firmware implementation example of a minimal OMIP device with basic buttons and analog input.
 
@@ -101,34 +99,6 @@ Start the PC backend and UI.
 
     Once launched, select the serial port to which the M5Tab is connected in the UI and press the "Connect" button to start communication with the device.
 
-### 2. Joy-Con PC Utility
-
-A tool for using Joy-Cons as PC input devices. You can freely map button and stick inputs to keyboard shortcuts and mouse movements.
-
-#### How to Run
-
-1.  **Set up Python Environment:**
-    In the `pc_software/` directory at the root of the repository, create a virtual environment and install dependencies.
-    ```shell
-    # Windows
-    cd pc_software
-    python -m venv venv
-    venv\Scripts\activate
-    pip install -r requirements.txt
-
-    # macOS / Linux
-    cd pc_software
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    ```
-
-2.  **Launch the Application:**
-    Run `main.py` to start the web server.
-    ```shell
-    python main.py
-    ```
-    Access `http://127.0.0.1:8000` in your browser to see the configuration screen for connected Joy-Cons.
 
 ---
 
